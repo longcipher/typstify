@@ -1,10 +1,9 @@
 //! Configuration for the typstify SSG
 
-use std::path::PathBuf;
-
 use config::{Config, File};
 use eyre::Result;
 use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 
 /// Main configuration structure
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -186,5 +185,48 @@ impl AppConfig {
     /// Get author (for backward compatibility)
     pub fn author(&self) -> &str {
         &self.site.author
+    }
+}
+
+/// Legacy SiteConfig for backward compatibility
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LegacySiteConfig {
+    pub website_title: String,
+    pub website_tagline: String,
+    pub base_url: String,
+    pub author: String,
+}
+
+impl Default for LegacySiteConfig {
+    fn default() -> Self {
+        let app_config = AppConfig::default();
+        Self {
+            website_title: app_config.site.title,
+            website_tagline: app_config.site.description,
+            base_url: app_config.site.base_url,
+            author: app_config.site.author,
+        }
+    }
+}
+
+impl From<AppConfig> for LegacySiteConfig {
+    fn from(app_config: AppConfig) -> Self {
+        Self {
+            website_title: app_config.site.title,
+            website_tagline: app_config.site.description,
+            base_url: app_config.site.base_url,
+            author: app_config.site.author,
+        }
+    }
+}
+
+impl From<LegacySiteConfig> for SiteConfig {
+    fn from(legacy: LegacySiteConfig) -> Self {
+        Self {
+            title: legacy.website_title,
+            description: legacy.website_tagline,
+            base_url: legacy.base_url,
+            author: legacy.author,
+        }
     }
 }

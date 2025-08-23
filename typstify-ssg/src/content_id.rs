@@ -34,9 +34,10 @@ impl ContentId {
                 &path_str
             };
 
-            // Keep path separators as slashes for URL paths
-            let normalized = without_ext.replace('\\', "/");
-            Self(normalized)
+            // Convert path separators to dashes and make slug
+            let normalized = without_ext.replace(['/', '\\'], "-");
+            let slug = Self::to_slug(&normalized);
+            Self(slug)
         } else {
             Self::from_path(full_path)
         }
@@ -73,11 +74,7 @@ impl ContentId {
     }
 
     pub fn to_url_path(&self) -> String {
-        if self.0.starts_with('/') {
-            self.0.clone()
-        } else {
-            format!("/{}", self.0)
-        }
+        format!("/{}", self.0)
     }
 
     pub fn to_file_name(&self, extension: &str) -> String {

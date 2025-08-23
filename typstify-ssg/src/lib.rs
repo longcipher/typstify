@@ -10,15 +10,15 @@ pub mod mdbook_template;
 pub mod metadata;
 pub mod renderers;
 
-use std::path::{Path, PathBuf};
-
 pub use config::*;
 pub use content::*;
 pub use content_id::*;
-use eyre::Result;
 pub use mdbook_template::*;
 pub use metadata::*;
 pub use renderers::*;
+
+use eyre::Result;
+use std::path::{Path, PathBuf};
 use tracing::info;
 
 /// Main site builder struct
@@ -40,9 +40,9 @@ impl Site {
         }
     }
 
-    /// Set the site configuration
-    pub fn with_site_config(mut self, config: SiteConfig) -> Self {
-        self.config.site = config;
+    /// Set the site configuration (legacy LegacySiteConfig)
+    pub fn with_config(mut self, config: LegacySiteConfig) -> Self {
+        self.config.site = config.into();
         self
     }
 
@@ -113,7 +113,7 @@ impl Site {
                 let entry = entry?;
                 let path = entry.path();
                 if path.extension().and_then(|s| s.to_str()) == Some("css") {
-                    let file_name = path.file_name().expect("Path should have a filename");
+                    let file_name = path.file_name().unwrap();
                     let dest_path = output_style.join(file_name);
                     std::fs::copy(&path, &dest_path)?;
                     info!(
@@ -130,19 +130,19 @@ impl Site {
     /// Generate HTML pages for all content
     fn generate_pages(&self) -> Result<()> {
         // Create template generator
-        let template = MdBookTemplate::new(self.config.site.clone(), self.content.clone());
+        let legacy_config = LegacySiteConfig {
+            website_title: self.config.site.title.clone(),
+            website_tagline: self.config.site.description.clone(),
+            base_url: self.config.site.base_url.clone(),
+            author: self.config.site.author.clone(),
+        };
+        let template = MdBookTemplate::new(legacy_config, self.content.clone());
 
         for content in &self.content {
             let html = template.generate_page(content, &content.slug())?;
 
-            // Create output path based on content slug with proper directory structure
-            let output_path = if content.slug().contains('/') {
-                // For nested paths like "getting-started/installation"
-                self.output_dir.join(format!("{}.html", content.slug()))
-            } else {
-                // For root level files
-                self.output_dir.join(format!("{}.html", content.slug()))
-            };
+            // Create output path based on content slug
+            let output_path = self.output_dir.join(format!("{}.html", content.slug()));
 
             // Ensure output directory exists
             if let Some(parent) = output_path.parent() {
@@ -162,12 +162,140 @@ impl Site {
 
     /// Generate the index page listing all content
     fn generate_index(&self) -> Result<()> {
-        let template = MdBookTemplate::new(self.config.site.clone(), self.content.clone());
+        let legacy_config = LegacySiteConfig {
+            website_title: self.config.site.title.clone(),
+            website_tagline: self.config.site.description.clone(),
+            base_url: self.config.site.base_url.clone(),
+            author: self.config.site.author.clone(),
+        };
+        let template = MdBookTemplate::new(legacy_config, self.content.clone());
         let index_html = template.generate_index_page()?;
         let index_path = self.output_dir.join("index.html");
         std::fs::write(&index_path, index_html)?;
         info!("Generated index: {}", index_path.display());
         Ok(())
+    }
+
+    /// Generate HTML for a single content item
+    #[allow(dead_code)]
+    fn generate_html_for_content(&self, content: &Content) -> Result<String> {
+        let rendered_content = content.render()?;
+
+        let html = format!(
+            r#"<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{} - {}</title>
+    <link rel="stylesheet" href="/style/site.css">
+</head>
+<body class="bg-base-100 text-base-content">
+    <div class="container mx-auto px-4 py-8">
+        <header class="mb-8">
+            <h1 class="text-4xl font-bold text-primary mb-4">{}</h1>
+            <div class="text-sm text-base-content/70">
+                {}
+            </div>
+        </header>
+        
+        <main class="prose prose-lg max-w-none">
+            {}
+        </main>
+        
+        <footer class="mt-12 pt-8 border-t border-base-300">
+            <p class="text-center text-base-content/70">
+                Built with Typstify SSG
+            </p>
+        </footer>
+    </div>
+</body>
+</html>"#,
+            content.metadata.get_title(),
+            self.config.website_title(),
+            content.metadata.get_title(),
+            if let Some(date) = content.metadata.get_date() {
+                format!("Published on {}", date)
+            } else {
+                "".to_string()
+            },
+            rendered_content
+        );
+
+        Ok(html)
+    }
+
+    /// Generate the index HTML page
+    #[allow(dead_code)]
+    fn generate_index_html(&self) -> Result<String> {
+        let mut posts_html = String::new();
+
+        for content in &self.content {
+            posts_html.push_str(&format!(
+                r#"<div class="card bg-base-200 shadow-md mb-6">
+                    <div class="card-body">
+                        <h2 class="card-title text-2xl">
+                            <a href="{}.html" class="link link-primary">{}</a>
+                        </h2>
+                        {}
+                        <div class="card-actions justify-end">
+                            <a href="{}.html" class="btn btn-primary">Read More</a>
+                        </div>
+                    </div>
+                </div>"#,
+                content.slug(),
+                content.metadata.get_title(),
+                if let Some(summary) = content.metadata.get_summary() {
+                    format!("<p class=\"text-base-content/80\">{}</p>", summary)
+                } else {
+                    "".to_string()
+                },
+                content.slug()
+            ));
+        }
+
+        let html = format!(
+            r#"<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{}</title>
+    <link rel="stylesheet" href="/style/site.css">
+</head>
+<body class="bg-base-100 text-base-content">
+    <div class="container mx-auto px-4 py-8">
+        <header class="hero bg-gradient-to-r from-primary to-secondary text-primary-content mb-12 rounded-lg">
+            <div class="hero-content text-center py-16">
+                <div class="max-w-md">
+                    <h1 class="text-5xl font-bold">{}</h1>
+                    <p class="py-6 text-xl">{}</p>
+                </div>
+            </div>
+        </header>
+        
+        <main>
+            <section class="mb-12">
+                <h2 class="text-3xl font-bold mb-8">Latest Posts</h2>
+                {}
+            </section>
+        </main>
+        
+        <footer class="mt-12 pt-8 border-t border-base-300">
+            <p class="text-center text-base-content/70">
+                Built with Typstify SSG
+            </p>
+        </footer>
+    </div>
+</body>
+</html>"#,
+            self.config.website_title(),
+            self.config.website_title(),
+            self.config.website_tagline(),
+            posts_html
+        );
+
+        Ok(html)
     }
 }
 

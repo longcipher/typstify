@@ -1,7 +1,6 @@
-use std::collections::HashMap;
-
 use eyre::Result;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ContentMetadata {
@@ -36,19 +35,19 @@ impl ContentMetadata {
     }
 
     pub fn extract_from_markdown(content: &str) -> Result<(Self, String)> {
-        if content.starts_with("+++") {
+        if let Some(stripped) = content.strip_prefix("+++") {
             // TOML frontmatter
-            if let Some(end) = content[3..].find("+++") {
-                let frontmatter = &content[3..end + 3];
-                let body = &content[end + 6..];
+            if let Some(end) = stripped.find("+++") {
+                let frontmatter = &stripped[..end];
+                let body = &stripped[end + 3..];
                 let metadata = Self::from_toml(frontmatter)?;
                 return Ok((metadata, body.trim().to_string()));
             }
-        } else if content.starts_with("---") {
+        } else if let Some(stripped) = content.strip_prefix("---") {
             // YAML frontmatter
-            if let Some(end) = content[3..].find("---") {
-                let frontmatter = &content[3..end + 3];
-                let body = &content[end + 6..];
+            if let Some(end) = stripped.find("---") {
+                let frontmatter = &stripped[..end];
+                let body = &stripped[end + 3..];
                 let metadata = Self::from_yaml(frontmatter)?;
                 return Ok((metadata, body.trim().to_string()));
             }
@@ -71,10 +70,10 @@ impl ContentMetadata {
             } else if in_metadata && line.trim() == "]" {
                 in_metadata = false;
                 // Parse the metadata content as YAML
-                if !metadata_content.trim().is_empty() {
-                    if let Ok(parsed) = Self::from_yaml(&metadata_content) {
-                        metadata = parsed;
-                    }
+                if !metadata_content.trim().is_empty()
+                    && let Ok(parsed) = Self::from_yaml(&metadata_content)
+                {
+                    metadata = parsed;
                 }
                 continue;
             } else if in_metadata {

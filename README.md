@@ -1,37 +1,39 @@
 # Typstify
 
 [![Rust](https://img.shields.io/badge/rust-1.70+-orange.svg)](https://www.rust-lang.org/)
+[![Leptos](https://img.shields.io/badge/leptos-0.8-blue.svg)](https://leptos.dev/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-A modern static site generator built with **Rust**, supporting both **Typst** and **Markdown** content with beautiful **mdBook-style layout** powered by **Tailwind CSS v4** and **DaisyUI**.
+A modern documentation site generator built with **Typst** and **Leptos**, featuring beautiful **Web3-inspired design** with **Dracula theme** and **DaisyUI** components.
+
+![Typstify Preview](public/images/preview.png)
 
 ## ✨ Features
 
-- 🚀 **Lightning Fast**: Built with Rust for incredible performance
-- 📝 **Multi-Format Support**: Process both Typst (.typ) and Markdown (.md) files
-- 🎨 **Modern Design**: mdBook-style layout with collapsible navigation
-- 📱 **Mobile-Friendly**: Responsive design with Tailwind CSS v4 and DaisyUI
-- 🌐 **Static Site Generation**: Fast, SEO-friendly static sites
-- 🔧 **Configurable**: Extensive configuration options via TOML
-- 📊 **RSS Feed**: Automatic RSS/Atom feed generation
-- 🗺️ **Sitemap**: Auto-generated sitemap for SEO
-- 🎯 **OpenGraph**: Built-in social media optimization
-- 🔍 **Code Highlighting**: Beautiful syntax highlighting with Dracula theme
+- 🚀 **Lightning Fast**: Built with Rust and WebAssembly for incredible performance
+- 📝 **Typst-Powered**: Beautiful typography and mathematical formulas
+- 🎨 **Web3-Ready Design**: Modern, responsive design with Dracula theme
+- 🔍 **Powerful Search**: Advanced search capabilities with real-time results
+- 📱 **Mobile-Friendly**: Responsive design that works on all devices
+- ⚡ **Hot Reload**: Instant updates during development
+- 🌐 **SSG**: Static site generation for optimal performance
+- 🎯 **SEO-Optimized**: Built-in SEO optimization and meta tags
 
 ## 🎯 Perfect For
 
-- **Technical Documentation**: API docs, guides, and tutorials
+- **Blockchain Projects**: DeFi protocols, DAOs, and Web3 applications
+- **API Documentation**: RESTful APIs, GraphQL, and SDK documentation
+- **Technical Guides**: Developer documentation and tutorials
 - **Open Source Projects**: GitHub project documentation
-- **Academic Papers**: Research papers with mathematical formulas (Typst)
-- **Knowledge Bases**: Internal documentation and wikis
-- **Blogs**: Technical blogs with code examples
+- **Academic Papers**: Research papers with mathematical formulas
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 
 - [Rust](https://rustup.rs/) (latest stable)
-- [Bun](https://bun.sh/) (for CSS compilation)
+- [Node.js](https://nodejs.org/) (v18+)
+- [cargo-leptos](https://github.com/leptos-rs/cargo-leptos)
 
 ### Installation
 
@@ -41,20 +43,14 @@ git clone https://github.com/longcipher/typstify.git
 cd typstify
 
 # Install dependencies
-just install
+cargo build
+bun install
+
+# Start development server
+cargo leptos watch
 ```
 
-### Generate Your First Site
-
-```bash
-# Generate documentation with styles
-just dev
-
-# Or generate and serve immediately
-just docs
-```
-
-Visit `http://localhost:8080` to see your site!
+Visit `http://localhost:3000` to see your site!
 
 ### Create Your First Document
 
@@ -90,69 +86,39 @@ fn main() {
 - Easy to use
 ```
 
-Or create a Markdown file in `contents/my-page.md`:
-
-```markdown
----
-title: My First Markdown Page
-description: This is my first Markdown document
-tags: [example, tutorial, markdown]
----
-
-# Welcome to Typstify
-
-This is a paragraph with **bold** and *italic* text.
-
-## Code Examples
-
-```rust
-fn main() {
-    println!("Hello, Typstify!");
-}
-```
-
-## Lists and More
-
-- Beautiful typography
-- Fast performance  
-- Easy to use
-```
-
 ## 📖 Documentation
 
 - [Getting Started](contents/getting-started.typ) - Learn the basics
 - [Installation Guide](contents/getting-started/installation.typ) - Detailed setup
 - [Quick Start](contents/getting-started/quick-start.typ) - 5-minute setup
-- [Rust Guide](contents/rust-guide.md) - Rust development guide
-- [JavaScript Modern](contents/javascript-modern.md) - Modern JavaScript guide
+- [Configuration](docs/configuration.md) - Customize your site
+- [Deployment](docs/deployment.md) - Go live
 
 ## 🏗️ Project Structure
 
-```text
+```
 typstify/
-├── config.toml                  # Site configuration
-├── Justfile                     # Build commands
-├── contents/                    # Your Typst and Markdown documents
+├── config.toml              # Site configuration
+├── contents/                # Your Typst documents
 │   ├── getting-started.typ
-│   ├── rust-guide.md
-│   ├── javascript-modern.md
 │   └── getting-started/
 │       ├── installation.typ
 │       └── quick-start.typ
-├── typstify-ssg/               # Static site generator
+├── typst-components/         # Leptos Typst components library
 │   ├── src/
-│   │   ├── main.rs             # CLI entry point
-│   │   ├── config.rs           # Configuration handling
-│   │   ├── content.rs          # Content processing
-│   │   ├── renderers.rs        # Typst and Markdown renderers
-│   │   ├── mdbook_template.rs  # HTML template generation
-│   │   └── pages.rs            # Page generation
+│   │   ├── components/      # UI components
+│   │   ├── renderer.rs      # Typst renderer
+│   │   └── types.rs         # Type definitions
 │   └── Cargo.toml
-├── style/                      # CSS and styling
-│   ├── input.css              # Tailwind CSS source
-│   └── output.css             # Generated CSS
-├── site/                       # Generated static site
-└── target/                     # Rust build artifacts
+├── typstify-site/           # Main frontend application
+│   ├── src/
+│   │   ├── app.rs          # Main app component
+│   │   ├── pages/          # Page components
+│   │   └── components/     # Site-specific components
+│   └── Cargo.toml
+├── public/                  # Static assets
+├── style/                   # Styles and themes
+└── dist/                    # Built site (generated)
 ```
 
 ## ⚙️ Configuration
@@ -161,91 +127,73 @@ Configure your site in `config.toml`:
 
 ```toml
 [site]
-title = "Typstify Documentation"
-description = "A static site generator that supports both Markdown and Typst content"
-base_url = "https://typstify.dev"
-author = "Typstify Team"
+title = "My Documentation"
+description = "Amazing project documentation"
+base_url = "https://my-docs.dev"
 
-[build]
-content_dir = "contents"
-output_dir = "site"
-style_dir = "style"
-assets_dir = "assets"
+[theme]
+name = "dracula"
+primary_color = "#bd93f9"
+secondary_color = "#ff79c6"
+accent_color = "#50fa7b"
 
-[rendering]
-syntax_highlighting = true
-code_theme = "dracula"
-generate_toc = true
-toc_depth = 3
+[navigation]
+[[navigation.items]]
+title = "Getting Started"
+path = "/getting-started"
+children = [
+  { title = "Installation", path = "/getting-started/installation" },
+  { title = "Quick Start", path = "/getting-started/quick-start" },
+]
 
-[features]
-feed = true        # Generate RSS feed
-sitemap = true     # Generate sitemap
-search = false     # Search functionality (future)
-opengraph = true   # Social media meta tags
-
-[feed]
-filename = "feed.xml"
-max_items = 20
-language = "en"
-
-[dev]
-port = 5173
-watch = true
-reload_port = 3002
+[social]
+github = "https://github.com/yourusername/yourproject"
 ```
+
+## 🎨 Themes
+
+Typstify comes with beautiful themes:
+
+- **Dracula** (default) - Dark purple theme perfect for Web3
+- **Dark** - Clean dark theme
+- **Light** - Minimal light theme  
+- **Cyberpunk** - Neon-inspired theme
+- **Synthwave** - Retro-futuristic theme
 
 ## 🛠️ Development
 
-### Available Commands
+### Building
 
 ```bash
-# 📖 Documentation Generation
-just dev           # Generate documentation site with styles
-just docs           # Generate and serve documentation
-just serve          # Serve generated documentation
+# Development build
+cargo leptos build
 
-# ⚙️ Build & Manage
-just build          # Build static site
-just build-styles   # Build Tailwind CSS styles
-just watch-styles   # Watch and rebuild styles
-just clean          # Clean generated site and styles
-just new-content    # Create new content file
+# Production build
+cargo leptos build --release
 
-# � Development Tools
-just format         # Format code (taplo, cargo fmt)
-just lint           # Lint code (taplo, clippy, cargo machete)
-
-# 🛠️ Setup
-just install        # Install all dependencies
+# Watch for changes
+cargo leptos watch
 ```
 
 ### CSS Development
 
-This project uses **Tailwind CSS v4** with **DaisyUI** for styling:
-
 ```bash
-# Build styles
-just build-styles
+# Build Tailwind CSS
+bun run build
 
-# Watch for style changes
-just watch-styles
-
-# Or use bun directly
-bunx @tailwindcss/cli --input ./style/input.css --output ./style/output.css --watch
+# Watch CSS changes
+bun run build:watch
 ```
 
-### Testing and Quality
+### Testing
 
 ```bash
-# Format code
-just format
+# Run Rust tests
+cargo test
 
-# Run linting checks
-just lint
-
-# Clean build artifacts
-just clean
+# Run end-to-end tests
+cd end2end
+bun test
 ```
 
 ## 🚀 Deployment
@@ -254,57 +202,25 @@ just clean
 
 ```bash
 # Build for production
-just build
+cargo leptos build --release
 
-# Deploy the site/ directory to:
+# Deploy the dist/ directory to:
 # - GitHub Pages
 # - Netlify
 # - Vercel
 # - Any static host
 ```
 
-### Using Docker
+### Containerized Deployment
 
 ```dockerfile
 FROM rust:alpine as builder
 WORKDIR /app
 COPY . .
-RUN cargo build --release
+RUN cargo leptos build --release
 
 FROM nginx:alpine
-COPY --from=builder /app/site /usr/share/nginx/html
-```
-
-### GitHub Actions
-
-```yaml
-name: Deploy Typstify Site
-
-on:
-  push:
-    branches: [ main ]
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-    - uses: dtolnay/rust-toolchain@stable
-    - uses: oven-sh/setup-bun@v1
-    
-    - name: Install dependencies
-      run: |
-        cargo build
-        bun install
-    
-    - name: Build site
-      run: just dev
-    
-    - name: Deploy to GitHub Pages
-      uses: peaceiris/actions-gh-pages@v3
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./site
+COPY --from=builder /app/dist /usr/share/nginx/html
 ```
 
 ## 🤝 Contributing
@@ -316,10 +232,9 @@ We love contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for 
 1. Fork the repository
 2. Create a feature branch: `git checkout -b feature/amazing-feature`
 3. Make your changes and test thoroughly
-4. Format and lint: `just format && just lint`
-5. Commit: `git commit -m 'Add amazing feature'`
-6. Push: `git push origin feature/amazing-feature`
-7. Open a Pull Request
+4. Commit: `git commit -m 'Add amazing feature'`
+5. Push: `git push origin feature/amazing-feature`
+6. Open a Pull Request
 
 ## 📝 License
 
@@ -328,11 +243,10 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 🙏 Acknowledgments
 
 - [Typst](https://typst.app/) - Modern typesetting system
-- [Rust](https://www.rust-lang.org/) - Systems programming language
+- [Leptos](https://leptos.dev/) - Reactive web framework for Rust
 - [Tailwind CSS](https://tailwindcss.com/) - Utility-first CSS framework
 - [DaisyUI](https://daisyui.com/) - Beautiful component library
 - [Dracula Theme](https://draculatheme.com/) - Dark theme inspiration
-- [mdBook](https://rust-lang.github.io/mdBook/) - Layout inspiration
 
 ## 🌟 Show Your Support
 
@@ -343,7 +257,10 @@ If you like this project, please give it a ⭐ on GitHub!
 - 📖 [Documentation](https://typstify.dev)
 - 🐛 [Report Issues](https://github.com/longcipher/typstify/issues)
 - 💬 [Discussions](https://github.com/longcipher/typstify/discussions)
+- 📧 [Email Support](mailto:support@typstify.dev)
 
 ---
 
-**Built with ❤️ for the documentation community**
+<div align="center">
+  <strong>Built with ❤️ for the Web3 community</strong>
+</div>

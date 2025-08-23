@@ -4,16 +4,6 @@ version = "0.1.0"
 edition = "2024"
 description = "Static Site Generator for Typstify - supports both Markdown and Typst content"
 
-[package.metadata.cargo-machete]
-ignored = [
-    "camino",
-    "serde_json",
-    "tailwind_fuse",
-    "tl",
-    "typst",
-    "typst-syntax",
-]
-
 [dependencies]
 # CLI
 clap = { version = "4.5", features = ["derive"] }
@@ -24,9 +14,9 @@ leptos = { version = "0.8", features = ["csr"] }
 
 # Content processing
 pulldown-cmark = { version = "0.13.0", features = ["html"] }
-regex = "1.10"
 typst = "0.13.1"
 typst-syntax = "0.13.1"
+regex = "1.10"
 
 # File system and path handling
 camino = "1.1"

@@ -1,14 +1,10 @@
 //! Content handling for Markdown and Typst files
 
-use std::path::{Path, PathBuf};
-
+use crate::content_id::ContentId;
+use crate::metadata::ContentMetadata;
+use crate::renderers::{MarkdownRenderer, Renderer, RendererError, TypstRenderer};
 use eyre::Result;
-
-use crate::{
-    content_id::ContentId,
-    metadata::ContentMetadata,
-    renderers::{MarkdownRenderer, Renderer, RendererError, TypstRenderer},
-};
+use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ContentType {
@@ -50,7 +46,7 @@ impl Content {
             ContentType::Typst => ContentMetadata::extract_from_typst(&raw_content)?,
         };
 
-        let id = ContentId::from_relative_path(Path::new("contents"), path);
+        let id = ContentId::from_path(path);
 
         Ok(Content {
             id,

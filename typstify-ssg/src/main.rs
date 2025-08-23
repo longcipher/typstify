@@ -1,7 +1,6 @@
-use std::path::PathBuf;
-
 use clap::{Parser, Subcommand};
 use eyre::Result;
+use std::path::PathBuf;
 use tracing::info;
 use typstify_ssg::{Site, config::AppConfig};
 
@@ -78,7 +77,7 @@ fn main() -> Result<()> {
         }
         Commands::Serve { dir, port } => {
             let serve_dir = dir.unwrap_or_else(|| app_config.build.output_dir.clone());
-            let serve_port = port.unwrap_or(8080); // Default to 8080 instead of 5173
+            let serve_port = port.unwrap_or(app_config.dev.port);
 
             info!(
                 "🌐 Serving site from {} on port {}",
@@ -98,39 +97,17 @@ fn main() -> Result<()> {
 fn serve_directory(dir: PathBuf, port: u16) -> Result<()> {
     use std::process::Command;
 
-    // Check if directory exists
-    if !dir.exists() {
-        eyre::bail!(
-            "Directory '{}' does not exist. Please run 'just build' first.",
-            dir.display()
-        );
-    }
-
     info!("Starting HTTP server...");
-
-    // Try python3 first, then fallback to python
-    let python_cmd = if Command::new("python3").arg("--version").output().is_ok() {
-        "python3"
-    } else if Command::new("python").arg("--version").output().is_ok() {
-        "python"
-    } else {
-        eyre::bail!("Python is required to serve files. Please install Python 3.");
-    };
-
-    let mut cmd = Command::new(python_cmd)
+    let mut cmd = Command::new("python3")
         .args(["-m", "http.server", &port.to_string()])
         .current_dir(dir)
-        .spawn()
-        .map_err(|e| eyre::eyre!("Failed to start server: {}", e))?;
+        .spawn()?;
 
     // Wait for the command to finish
     let status = cmd.wait()?;
 
     if !status.success() {
-        eyre::bail!(
-            "Server exited with error. Port {} might be already in use. Try a different port with --port <PORT>",
-            port
-        );
+        eyre::bail!("Server exited with error");
     }
 
     Ok(())

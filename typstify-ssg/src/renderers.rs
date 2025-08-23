@@ -93,10 +93,8 @@ impl TypstRenderer {
         let mut html = String::new();
         let mut in_code_block = false;
         let mut code_language = String::new();
-        let mut in_list = false;
-        let mut current_list_items = Vec::new();
 
-        for (i, line) in lines.iter().enumerate() {
+        for line in lines {
             // Skip comment lines (metadata)
             if line.trim_start().starts_with("//") {
                 continue;
@@ -137,28 +135,6 @@ impl TypstRenderer {
                 continue;
             }
 
-            let line_trimmed = line.trim();
-
-            // Handle list items
-            if line_trimmed.starts_with("- ") {
-                let text = line_trimmed.strip_prefix("- ").unwrap_or("").trim();
-                current_list_items.push(text.to_string());
-                in_list = true;
-                continue;
-            } else if in_list {
-                // End of list, output all items
-                html.push_str("<ul>");
-                for item in &current_list_items {
-                    html.push_str(&format!(
-                        "<li>{}</li>",
-                        self.process_inline_formatting(item)
-                    ));
-                }
-                html.push_str("</ul>\n");
-                current_list_items.clear();
-                in_list = false;
-            }
-
             // Handle headings
             if line.starts_with("====") {
                 let text = line.strip_prefix("====").unwrap_or("").trim();
@@ -185,27 +161,24 @@ impl TypstRenderer {
                     self.process_inline_formatting(text)
                 ));
             }
-            // Handle empty lines - only add spacing between content blocks
-            else if line_trimmed.is_empty() {
-                // Look ahead to see if next line has content
-                let next_line_has_content = lines
-                    .get(i + 1)
-                    .map(|next_line| {
-                        !next_line.trim().is_empty() && !next_line.trim_start().starts_with("//")
-                    })
-                    .unwrap_or(false);
+            // Handle list items
+            else if line.trim_start().starts_with("- ") {
+                let _indent_level = (line.len() - line.trim_start().len()) / 2; // Assuming 2 spaces per indent
+                let text = line.trim_start().strip_prefix("- ").unwrap_or("").trim();
 
-                // Only add spacing if there's content after this empty line
-                if next_line_has_content && !html.ends_with("\n\n") {
-                    html.push('\n');
-                }
+                // For simplicity, just use <ul><li> without nested handling for now
+                html.push_str(&format!(
+                    "<ul><li>{}</li></ul>\n",
+                    self.process_inline_formatting(text)
+                ));
             }
-            // Handle inline code blocks (single line with backticks)
-            else if line_trimmed.starts_with("`")
-                && line_trimmed.ends_with("`")
-                && line_trimmed.len() > 1
+            // Handle inline code
+            else if line.trim().starts_with("`")
+                && line.trim().ends_with("`")
+                && line.trim().len() > 1
             {
-                let code = line_trimmed
+                let code = line
+                    .trim()
                     .strip_prefix("`")
                     .unwrap()
                     .strip_suffix("`")
@@ -215,25 +188,17 @@ impl TypstRenderer {
                     code
                 ));
             }
+            // Handle empty lines
+            else if line.trim().is_empty() {
+                html.push_str("<br>\n");
+            }
             // Handle regular paragraphs
-            else if !line_trimmed.is_empty() {
+            else if !line.trim().is_empty() {
                 html.push_str(&format!(
                     "<p>{}</p>\n",
-                    self.process_inline_formatting(line_trimmed)
+                    self.process_inline_formatting(line.trim())
                 ));
             }
-        }
-
-        // Handle any remaining list items
-        if in_list && !current_list_items.is_empty() {
-            html.push_str("<ul>");
-            for item in &current_list_items {
-                html.push_str(&format!(
-                    "<li>{}</li>",
-                    self.process_inline_formatting(item)
-                ));
-            }
-            html.push_str("</ul>\n");
         }
 
         Ok(html)

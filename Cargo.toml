@@ -13,11 +13,11 @@ resolver = "2"
 # Core
 eyre = "0.6.12"
 futures = "0.3.31"
+tracing = "0.1.40"
+tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.141"
 toml = "0.8.23"
-tracing = "0.1.40"
-tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
 
 # WebAssembly / JS interop
 console_error_panic_hook = "0.1.7"
@@ -50,8 +50,8 @@ panic = "abort"
 # Project identifier
 name = "typstify"
 # Packages/crates
-lib-package = "typstify-ssg"
-bin-package = "typstify-ssg"
+lib-package = "typstify-site"
+bin-package = "typstify-site"
 # Output naming
 output-name = "typstify"
 # Serve/build directories
