@@ -1,0 +1,47 @@
+[site]
+title = "Typstify Documentation"
+description = "A static site generator that supports both Markdown and Typst content"
+base_url = "https://typstify.dev"
+author = "Typstify Team"
+
+[build]
+content_dir = "contents"
+output_dir = "site"
+style_dir = "style"
+assets_dir = "assets"
+
+[rendering]
+# Enable syntax highlighting
+syntax_highlighting = true
+# Theme for code blocks
+code_theme = "dracula"
+# Generate table of contents
+generate_toc = true
+# Maximum TOC depth
+toc_depth = 3
+
+[features]
+# Generate RSS/Atom feed
+feed = true
+# Generate sitemap
+sitemap = true
+# Generate search index
+search = false
+# Enable OpenGraph meta tags
+opengraph = true
+
+[feed]
+# Feed file name (will be placed in output_dir)
+filename = "feed.xml"
+# Number of items in feed
+max_items = 20
+# Feed language
+language = "en"
+
+[dev]
+# Development server port
+port = 5173
+# Auto-reload on changes
+watch = true
+# Live reload port
+reload_port = 3002

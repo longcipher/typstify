@@ -1,0 +1,64 @@
+[package]
+name = "typstify-ssg"
+version = "0.1.0"
+edition = "2024"
+description = "Static Site Generator for Typstify - supports both Markdown and Typst content"
+
+[package.metadata.cargo-machete]
+ignored = [
+    "camino",
+    "serde_json",
+    "tailwind_fuse",
+    "tl",
+    "typst",
+    "typst-syntax",
+]
+
+[dependencies]
+# CLI
+clap = { version = "4.5", features = ["derive"] }
+config = "0.15"
+
+# Leptos framework
+leptos = { version = "0.8", features = ["csr"] }
+
+# Content processing
+pulldown-cmark = { version = "0.13.0", features = ["html"] }
+regex = "1.10"
+typst = "0.13.1"
+typst-syntax = "0.13.1"
+
+# File system and path handling
+camino = "1.1"
+walkdir = "2.5"
+
+# Date and time
+chrono = { version = "0.4", features = ["serde"] }
+
+# Error handling
+eyre = "0.6.12"
+thiserror = "2.0"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+serde_yaml = "0.9.33"
+toml = "0.9.5"
+
+# CSS utilities
+tailwind_fuse = "0.3"
+
+# HTML parsing for custom components
+tl = "0.7"
+
+# Atom feed generation
+atom_syndication = "0.12"
+
+# Logging
+tracing = "0.1.40"
+tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
+
+[features]
+default = []
+opengraph = []
+optimize = []
