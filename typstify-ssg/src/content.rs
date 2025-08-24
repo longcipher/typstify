@@ -1,10 +1,14 @@
 //! Content handling for Markdown and Typst files
 
-use crate::content_id::ContentId;
-use crate::metadata::ContentMetadata;
-use crate::renderers::{MarkdownRenderer, Renderer, RendererError, TypstRenderer};
-use eyre::Result;
 use std::path::{Path, PathBuf};
+
+use eyre::Result;
+
+use crate::{
+    content_id::ContentId,
+    metadata::ContentMetadata,
+    renderers::{MarkdownRenderer, Renderer, RendererError, TypstRenderer},
+};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ContentType {
@@ -65,16 +69,14 @@ impl Content {
             if entry.file_type().is_file() {
                 let path = entry.path();
 
-                if let Some(extension) = path.extension().and_then(|e| e.to_str())
-                    && ContentType::from_extension(extension).is_some()
-                {
-                    match Self::from_file(path) {
-                        Ok(content_item) => {
-                            println!("Loaded: {}", path.display());
-                            content.push(content_item);
-                        }
-                        Err(e) => {
-                            eprintln!("Error loading {}: {}", path.display(), e);
+                if let Some(extension) = path.extension().and_then(|e| e.to_str()) {
+                    if ContentType::from_extension(extension).is_some() {
+                        match Self::from_file(path) {
+                            Ok(content_item) => {
+                                println!("Loaded: {}", path.display());
+                                content.push(content_item);
+                            }
+                            Err(e) => eprintln!("Failed to load {}: {}", path.display(), e),
                         }
                     }
                 }

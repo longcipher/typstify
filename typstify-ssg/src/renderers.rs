@@ -1,7 +1,8 @@
 //! Content renderers for Markdown and Typst files
 
-use eyre::Result;
 use std::path::PathBuf;
+
+use eyre::Result;
 
 #[derive(Debug, thiserror::Error)]
 pub enum RendererError {
@@ -208,8 +209,8 @@ impl TypstRenderer {
                 ));
             }
             // Handle numbered lists (simple)
-            else if line.trim_start().matches(char::is_numeric).count() > 0 
-                && line.trim_start().contains(". ") 
+            else if line.trim_start().matches(char::is_numeric).count() > 0
+                && line.trim_start().contains(". ")
             {
                 if let Some(dot_pos) = line.find(". ") {
                     let text = &line[dot_pos + 2..];
@@ -276,24 +277,22 @@ impl TypstRenderer {
 
     /// Validate Typst syntax using the official parser
     fn validate_typst_syntax(&self, content: &str) -> Result<(), RendererError> {
-        use typst_syntax::{Source, VirtualPath, FileId};
+        use typst_syntax::{FileId, Source, VirtualPath};
 
         #[allow(clippy::typos)]
         let path = VirtualPath::new("validation.typ");
         let id = FileId::new(None, path);
         let source = Source::new(id, content.to_string());
-        
+
         // Parse the source to check for syntax errors
         let parsed = typst_syntax::parse(source.text());
-        
+
         // Check for errors in the parsed result
         if parsed.errors().is_empty() {
             Ok(())
         } else {
-            let error_messages: Vec<String> = parsed.errors()
-                .iter()
-                .map(|e| format!("{:?}", e))
-                .collect();
+            let error_messages: Vec<String> =
+                parsed.errors().iter().map(|e| format!("{:?}", e)).collect();
             Err(RendererError::TypstError(format!(
                 "Syntax errors: {}",
                 error_messages.join("; ")

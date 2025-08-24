@@ -1,6 +1,7 @@
+use std::collections::HashMap;
+
 use eyre::Result;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ContentMetadata {
@@ -70,10 +71,10 @@ impl ContentMetadata {
             } else if in_metadata && line.trim() == "]" {
                 in_metadata = false;
                 // Parse the metadata content as YAML
-                if !metadata_content.trim().is_empty()
-                    && let Ok(parsed) = Self::from_yaml(&metadata_content)
-                {
-                    metadata = parsed;
+                if !metadata_content.trim().is_empty() {
+                    if let Ok(parsed) = Self::from_yaml(&metadata_content) {
+                        metadata = parsed;
+                    }
                 }
                 continue;
             } else if in_metadata {

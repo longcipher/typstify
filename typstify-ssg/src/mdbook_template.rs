@@ -1,6 +1,6 @@
-use crate::config::LegacySiteConfig;
-use crate::content::Content;
 use eyre::Result;
+
+use crate::{config::LegacySiteConfig, content::Content};
 
 pub struct MdBookTemplate {
     config: LegacySiteConfig,
@@ -54,7 +54,7 @@ impl MdBookTemplate {
                         })
                         .collect::<Vec<String>>()
                         .join(" ");
-                    
+
                     sections.entry(section).or_default().push(content);
                 }
             } else {
@@ -72,8 +72,10 @@ impl MdBookTemplate {
                 a_path.cmp(b_path)
             });
 
-            nav_html.push_str(r#"<div class="nav-root">
-                    <ul class="nav-list">"#);
+            nav_html.push_str(
+                r#"<div class="nav-root">
+                    <ul class="nav-list">"#,
+            );
 
             for content in root_content {
                 nav_html.push_str(&format!(
@@ -146,6 +148,7 @@ impl MdBookTemplate {
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{} - {}</title>
     <link rel="stylesheet" href="/style/output.css">
+    <link rel="stylesheet" href="/assets/search.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
 </head>
@@ -155,10 +158,6 @@ impl MdBookTemplate {
         <nav class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <a href="/index.html" class="sidebar-title">{}</a>
-            </div>
-            
-            <div class="search-box">
-                <input type="text" class="search-input" placeholder="Search documentation...">
             </div>
             
             <div class="sidebar-nav">
@@ -175,6 +174,10 @@ impl MdBookTemplate {
                 </button>
                 <div class="breadcrumb">
                     {}
+                </div>
+                <div class="search-box" id="search-container">
+                    <input type="text" id="search-input" class="search-input" placeholder="Search documentation...">
+                    <div id="search-results" class="search-results"></div>
                 </div>
             </header>
 
@@ -219,24 +222,8 @@ impl MdBookTemplate {
                 sidebar.classList.remove('sidebar-open');
             }}
         }});
-
-        // Search functionality placeholder
-        const searchInput = document.querySelector('.search-input');
-        searchInput.addEventListener('input', function(event) {{
-            const query = event.target.value.toLowerCase();
-            const navLinks = document.querySelectorAll('.nav-link');
-            
-            navLinks.forEach(link => {{
-                const text = link.textContent.toLowerCase();
-                const listItem = link.closest('.nav-item');
-                if (text.includes(query)) {{
-                    listItem.style.display = 'block';
-                }} else {{
-                    listItem.style.display = query ? 'none' : 'block';
-                }}
-            }});
-        }});
     </script>
+    <script src="/assets/search.js"></script>
 </body>
 </html>"#,
             content.metadata.get_title(),
@@ -300,6 +287,7 @@ impl MdBookTemplate {
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{}</title>
     <link rel="stylesheet" href="/style/output.css">
+    <link rel="stylesheet" href="/assets/search.css">
     <style>
         .content-card {{
             background-color: var(--bg-secondary);
@@ -381,10 +369,6 @@ impl MdBookTemplate {
                 <a href="/index.html" class="sidebar-title">{}</a>
             </div>
             
-            <div class="search-box">
-                <input type="text" class="search-input" placeholder="Search documentation...">
-            </div>
-            
             <div class="sidebar-nav">
                 {}
             </div>
@@ -399,6 +383,10 @@ impl MdBookTemplate {
                 </button>
                 <div class="breadcrumb">
                     <a href="/index.html">Home</a>
+                </div>
+                <div class="search-box" id="search-container">
+                    <input type="text" id="search-input" class="search-input" placeholder="Search documentation...">
+                    <div id="search-results" class="search-results"></div>
                 </div>
             </header>
 
@@ -439,24 +427,8 @@ impl MdBookTemplate {
                 sidebar.classList.remove('sidebar-open');
             }}
         }});
-
-        // Search functionality
-        const searchInput = document.querySelector('.search-input');
-        searchInput.addEventListener('input', function(event) {{
-            const query = event.target.value.toLowerCase();
-            const navLinks = document.querySelectorAll('.nav-link');
-            
-            navLinks.forEach(link => {{
-                const text = link.textContent.toLowerCase();
-                const listItem = link.closest('.nav-item');
-                if (text.includes(query)) {{
-                    listItem.style.display = 'block';
-                }} else {{
-                    listItem.style.display = query ? 'none' : 'block';
-                }}
-            }});
-        }});
     </script>
+    <script src="/assets/search.js"></script>
 </body>
 </html>"#,
             self.config.website_title,

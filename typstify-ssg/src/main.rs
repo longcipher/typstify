@@ -1,8 +1,9 @@
+use std::path::PathBuf;
+
 use clap::{Parser, Subcommand};
 use eyre::Result;
-use std::path::PathBuf;
 use tracing::info;
-use typstify_ssg::{Site, config::AppConfig};
+use typstify_ssg::{config::AppConfig, Site};
 
 #[derive(Parser)]
 #[command(name = "typstify-ssg")]
@@ -71,6 +72,7 @@ fn main() -> Result<()> {
             // Create site and build
             let mut site = Site::new(content_dir, output_dir).with_app_config(app_config);
             site.scan_content()?;
+            site.init_search_engine()?;
             site.build()?;
 
             info!("✅ Site built successfully!");

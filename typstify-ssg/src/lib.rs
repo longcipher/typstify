@@ -9,16 +9,18 @@ pub mod content_id;
 pub mod mdbook_template;
 pub mod metadata;
 pub mod renderers;
+pub mod search;
+
+use std::path::{Path, PathBuf};
 
 pub use config::*;
 pub use content::*;
 pub use content_id::*;
+use eyre::Result;
 pub use mdbook_template::*;
 pub use metadata::*;
 pub use renderers::*;
-
-use eyre::Result;
-use std::path::{Path, PathBuf};
+pub use search::*;
 use tracing::info;
 
 /// Main site builder struct
@@ -27,6 +29,7 @@ pub struct Site {
     pub output_dir: PathBuf,
     pub config: AppConfig,
     pub content: Vec<Content>,
+    pub search_engine: Option<SearchEngine>,
 }
 
 impl Site {
@@ -37,6 +40,7 @@ impl Site {
             output_dir: output_dir.into(),
             config: AppConfig::default(),
             content: Vec::new(),
+            search_engine: None,
         }
     }
 
@@ -50,6 +54,13 @@ impl Site {
     pub fn with_app_config(mut self, config: AppConfig) -> Self {
         self.config = config;
         self
+    }
+
+    /// Initialize the search engine
+    pub fn init_search_engine(&mut self) -> Result<()> {
+        let index_dir = self.output_dir.join(".search_index");
+        self.search_engine = Some(SearchEngine::new(index_dir)?);
+        Ok(())
     }
 
     /// Scan the content directory for Markdown and Typst files
@@ -79,25 +90,48 @@ impl Site {
         // Generate HTML pages
         self.generate_pages()?;
 
+        // Build search index if search engine is available
+        self.build_search_index()?;
+
         info!("Site build complete!");
         Ok(())
     }
 
     /// Copy static assets to the output directory
     fn copy_assets(&self) -> Result<()> {
-        let assets_dir = self.content_dir.join("assets");
-        if assets_dir.exists() {
-            let output_assets = self.output_dir.join("assets");
-            if output_assets.exists() {
-                std::fs::remove_dir_all(&output_assets)?;
+        // Create assets directory in output
+        let output_assets = self.output_dir.join("assets");
+        std::fs::create_dir_all(&output_assets)?;
+
+        // Copy search JavaScript file
+        let search_js_content = include_str!("../../site/assets/search.js");
+        std::fs::write(output_assets.join("search.js"), search_js_content)?;
+        info!("Copied search.js to output assets");
+
+        // Copy search CSS file
+        let search_css_content = include_str!("../../site/assets/search.css");
+        std::fs::write(output_assets.join("search.css"), search_css_content)?;
+        info!("Copied search.css to output assets");
+
+        // Copy user assets if they exist
+        let user_assets_dir = self.content_dir.join("assets");
+        if user_assets_dir.exists() {
+            for entry in std::fs::read_dir(&user_assets_dir)? {
+                let entry = entry?;
+                let path = entry.path();
+                if path.is_file() {
+                    let file_name = path.file_name().unwrap();
+                    let dest_path = output_assets.join(file_name);
+                    std::fs::copy(&path, &dest_path)?;
+                    info!(
+                        "Copied user asset: {} to {}",
+                        path.display(),
+                        dest_path.display()
+                    );
+                }
             }
-            copy_dir(&assets_dir, &output_assets)?;
-            info!(
-                "Copied assets from {} to {}",
-                assets_dir.display(),
-                output_assets.display()
-            );
         }
+
         Ok(())
     }
 
@@ -158,6 +192,32 @@ impl Site {
         self.generate_index()?;
 
         Ok(())
+    }
+
+    /// Build search index for all content
+    fn build_search_index(&self) -> Result<()> {
+        if let Some(search_engine) = &self.search_engine {
+            // Rebuild search index with current content
+            search_engine.rebuild_index(&self.content)?;
+
+            // Export search results to JSON for client-side use
+            let search_json_path = self.output_dir.join("search-index.json");
+            search_engine.export_search_results(&search_json_path, 1000)?;
+
+            info!("Search index built successfully");
+        } else {
+            info!("Search engine not initialized, skipping search index");
+        }
+        Ok(())
+    }
+
+    /// Search content using the search engine
+    pub fn search(&self, query: &str, limit: usize) -> Result<Vec<SearchResult>> {
+        if let Some(search_engine) = &self.search_engine {
+            search_engine.search(query, limit)
+        } else {
+            Ok(Vec::new())
+        }
     }
 
     /// Generate the index page listing all content
@@ -300,6 +360,7 @@ impl Site {
 }
 
 /// Copy a directory recursively
+#[allow(dead_code)]
 fn copy_dir(src: &Path, dst: &Path) -> Result<()> {
     std::fs::create_dir_all(dst)?;
 

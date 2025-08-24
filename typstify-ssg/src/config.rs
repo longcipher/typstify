@@ -1,9 +1,10 @@
 //! Configuration for the typstify SSG
 
+use std::path::PathBuf;
+
 use config::{Config, File};
 use eyre::Result;
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
 
 /// Main configuration structure
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
