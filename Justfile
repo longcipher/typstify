@@ -45,9 +45,11 @@ watch-styles:
     bunx tailwindcss --input ./style/input.css --output ./style/output.css --watch
 
 # Build static site using typstify-ssg
-build:
+build: build-styles
     @echo "🚀 Building static site with typstify-ssg..."
     cargo run --bin typstify-ssg
+    @echo "🎨 Copying compiled CSS to site directory..."
+    cp style/output.css site/style/
     @echo "✅ Static site generated in site/ directory"
 
 # Build static site in release mode (optimized)

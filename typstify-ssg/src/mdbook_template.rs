@@ -18,7 +18,8 @@ impl MdBookTemplate {
     pub fn generate_navigation(&self) -> String {
         let mut nav_html = String::new();
 
-        // Group content by directory structure relative to contents/
+        // Separate root-level content from grouped content
+        let mut root_content: Vec<&Content> = Vec::new();
         let mut sections: std::collections::BTreeMap<String, Vec<&Content>> =
             std::collections::BTreeMap::new();
 
@@ -29,16 +30,16 @@ impl MdBookTemplate {
                 .strip_prefix("contents/")
                 .unwrap_or(&content.file_path);
 
-            let section = if let Some(parent) = relative_path.parent() {
+            if let Some(parent) = relative_path.parent() {
                 if parent.as_os_str().is_empty() {
-                    // Files directly in contents/ go to root section
-                    "Documentation".to_string()
+                    // Files directly in contents/ go to root level
+                    root_content.push(content);
                 } else {
                     // Files in subdirectories use the directory name
-                    parent
+                    let section = parent
                         .file_name()
                         .and_then(|name| name.to_str())
-                        .unwrap_or("Documentation")
+                        .unwrap_or("Other")
                         .replace("-", " ")
                         .replace("_", " ")
                         .split_whitespace()
@@ -52,15 +53,42 @@ impl MdBookTemplate {
                             }
                         })
                         .collect::<Vec<String>>()
-                        .join(" ")
+                        .join(" ");
+                    
+                    sections.entry(section).or_default().push(content);
                 }
             } else {
-                "Documentation".to_string()
-            };
-
-            sections.entry(section).or_default().push(content);
+                // Fallback: add to root
+                root_content.push(content);
+            }
         }
 
+        // Generate root-level navigation first
+        if !root_content.is_empty() {
+            // Sort root content by filename
+            root_content.sort_by(|a, b| {
+                let a_path = a.file_path.file_name().unwrap_or_default();
+                let b_path = b.file_path.file_name().unwrap_or_default();
+                a_path.cmp(b_path)
+            });
+
+            nav_html.push_str(r#"<div class="nav-root">
+                    <ul class="nav-list">"#);
+
+            for content in root_content {
+                nav_html.push_str(&format!(
+                    r#"<li class="nav-item">
+                            <a href="{}.html" class="nav-link">{}</a>
+                        </li>"#,
+                    content.slug(),
+                    content.metadata.get_title()
+                ));
+            }
+
+            nav_html.push_str("</ul></div>");
+        }
+
+        // Generate grouped sections
         for (section_name, mut contents) in sections {
             // Sort contents within each section by filename
             contents.sort_by(|a, b| {
@@ -117,7 +145,7 @@ impl MdBookTemplate {
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{} - {}</title>
-    <link rel="stylesheet" href="/style/dracula-theme.css">
+    <link rel="stylesheet" href="/style/output.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
 </head>
@@ -271,7 +299,7 @@ impl MdBookTemplate {
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{}</title>
-    <link rel="stylesheet" href="/style/dracula-theme.css">
+    <link rel="stylesheet" href="/style/output.css">
     <style>
         .content-card {{
             background-color: var(--bg-secondary);
