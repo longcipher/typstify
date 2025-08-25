@@ -107,7 +107,25 @@ impl TypstRenderer {
             // Continue with conversion even if validation fails
         }
 
-        let lines: Vec<&str> = content.lines().collect();
+        // Pre-process Typst-specific elements
+        let mut processed_content = content.to_string();
+        
+        // Replace #line() with HTML hr
+        processed_content = regex::Regex::new(r"#line\([^)]*\)")
+            .unwrap()
+            .replace_all(&processed_content, "<hr class=\"typst-line\">")
+            .to_string();
+        
+        // Simple table replacement for now - we'll make it smarter later
+        processed_content = self.simple_table_replacement(&processed_content);
+        
+        // Replace #link() syntax
+        processed_content = regex::Regex::new(r#"#link\("([^"]+)"\)\[([^\]]+)\]"#)
+            .unwrap()
+            .replace_all(&processed_content, r#"<a href="$1" class="typst-link">$2</a>"#)
+            .to_string();
+
+        let lines: Vec<&str> = processed_content.lines().collect();
         let mut html = String::new();
         let mut in_code_block = false;
         let mut code_language = String::new();
@@ -280,7 +298,7 @@ impl TypstRenderer {
         use typst_syntax::{FileId, Source, VirtualPath};
 
         #[allow(clippy::typos)]
-        let path = VirtualPath::new("validation.typ");
+        let path = VirtualPath::new("validation.typo");
         let id = FileId::new(None, path);
         let source = Source::new(id, content.to_string());
 
@@ -335,6 +353,172 @@ impl TypstRenderer {
             .to_string();
 
         result
+    }
+    
+    /// Simple table replacement - converts basic Typst tables to HTML
+    fn simple_table_replacement(&self, content: &str) -> String {
+        let mut result = content.to_string();
+        
+        // Continue replacing tables until no more are found
+        loop {
+            if let Some(start) = result.find("#table(") {
+                let mut end = start;
+                let mut paren_count = 0;
+                let mut found_start = false;
+                
+                for (i, ch) in result[start..].char_indices() {
+                    match ch {
+                        '(' => {
+                            paren_count += 1;
+                            found_start = true;
+                        }
+                        ')' => {
+                            paren_count -= 1;
+                            if found_start && paren_count == 0 {
+                                end = start + i + 1;
+                                break;
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+                
+                if end > start {
+                    let table_block = &result[start..end];
+                    let html_table = self.convert_simple_table(table_block);
+                    result.replace_range(start..end, &html_table);
+                } else {
+                    break; // Safety break if we can't find the end
+                }
+            } else {
+                break; // No more tables found
+            }
+        }
+        
+        result
+    }
+    
+    /// Convert a simple Typst table to HTML
+    fn convert_simple_table(&self, table_content: &str) -> String {
+        // Determine column count from the columns definition
+        let columns_per_row = if table_content.contains("(auto, auto, 2fr)") || table_content.contains("(auto, auto, left)") { 
+            3 
+        } else { 
+            2 
+        };
+        
+        // Extract all cells using a more robust approach
+        let cells = self.extract_typst_table_cells(table_content);
+        
+        let mut html = String::from("<table class=\"typst-table\"><tbody>");
+        
+        // Determine where header ends - look for table.header section
+        let _header_end_index = self.find_header_end_index(table_content, &cells);
+        
+        // Generate HTML rows
+        for (row_index, row_cells) in cells.chunks(columns_per_row).enumerate() {
+            if row_cells.len() != columns_per_row {
+                continue; // Skip incomplete rows
+            }
+            
+            let is_header_row = row_index == 0 && table_content.contains("table.header(");
+            let tag = if is_header_row { "th" } else { "td" };
+            let class = if is_header_row { "typst-table-header" } else { "typst-table-cell" };
+            
+            let row_html = row_cells.iter()
+                .map(|cell| format!("<{} class=\"{}\">{}</{}>", tag, class, self.process_inline_formatting(cell), tag))
+                .collect::<Vec<_>>()
+                .join("");
+            
+            html.push_str(&format!("<tr>{}</tr>", row_html));
+        }
+        
+        html.push_str("</tbody></table>");
+        html
+    }
+    
+    /// Extract table cells from Typst table content using bracket matching
+    fn extract_typst_table_cells(&self, content: &str) -> Vec<String> {
+        let mut cells = Vec::new();
+        let mut current_cell = String::new();
+        let mut bracket_count = 0;
+        let mut in_cell = false;
+        let mut chars = content.chars().peekable();
+        
+        while let Some(ch) = chars.next() {
+            match ch {
+                '[' => {
+                    if !in_cell {
+                        // Starting a new cell
+                        in_cell = true;
+                        bracket_count = 1;
+                        current_cell.clear();
+                    } else {
+                        // Nested bracket
+                        bracket_count += 1;
+                        current_cell.push(ch);
+                    }
+                }
+                ']' => {
+                    if in_cell {
+                        bracket_count -= 1;
+                        if bracket_count == 0 {
+                            // End of cell
+                            cells.push(current_cell.trim().to_string());
+                            current_cell.clear();
+                            in_cell = false;
+                            
+                            // Skip the comma and whitespace after cell
+                            if chars.peek() == Some(&',') {
+                                chars.next(); // consume comma
+                                while chars.peek() == Some(&' ') || chars.peek() == Some(&'\n') || chars.peek() == Some(&'\t') {
+                                    chars.next();
+                                }
+                            }
+                        } else {
+                            current_cell.push(ch);
+                        }
+                    }
+                }
+                _ => {
+                    if in_cell {
+                        current_cell.push(ch);
+                    }
+                }
+            }
+        }
+        
+        cells
+    }
+    
+    /// Find where the header section ends in table content
+    fn find_header_end_index(&self, content: &str, _cells: &[String]) -> usize {
+        // Look for the end of table.header section
+        if let Some(header_start) = content.find("table.header(") {
+            let mut paren_count = 0;
+            let mut found_header_start = false;
+            let chars: Vec<char> = content.chars().collect();
+            let header_start_char_idx = content[..header_start].chars().count();
+            
+            for (i, &ch) in chars.iter().enumerate().skip(header_start_char_idx) {
+                match ch {
+                    '(' => {
+                        paren_count += 1;
+                        found_header_start = true;
+                    }
+                    ')' => {
+                        paren_count -= 1;
+                        if found_header_start && paren_count == 0 {
+                            // Count cells in header by counting brackets before this position
+                            let header_content: String = chars[header_start_char_idx..=i].iter().collect();
+                            return header_content.matches('[').count();
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+        0
     }
 }
 
