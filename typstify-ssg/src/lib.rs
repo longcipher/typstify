@@ -104,12 +104,12 @@ impl Site {
         std::fs::create_dir_all(&output_assets)?;
 
         // Copy search JavaScript file
-        let search_js_content = include_str!("../../site/assets/search.js");
+        let search_js_content = include_str!("../assets/search.js");
         std::fs::write(output_assets.join("search.js"), search_js_content)?;
         info!("Copied search.js to output assets");
 
         // Copy search CSS file
-        let search_css_content = include_str!("../../site/assets/search.css");
+        let search_css_content = include_str!("../assets/search.css");
         std::fs::write(output_assets.join("search.css"), search_css_content)?;
         info!("Copied search.css to output assets");
 
@@ -136,25 +136,41 @@ impl Site {
     }
 
     /// Copy style files to the output directory
+    /// Uses embedded CSS content from the binary instead of external files
     fn copy_styles(&self) -> Result<()> {
+        let output_style = self.output_dir.join("style");
+        std::fs::create_dir_all(&output_style)?;
+
+        // Write embedded CSS content to output.css
+        let embedded_css = include_str!("../../style/output.css");
+        let output_css_path = output_style.join("output.css");
+        std::fs::write(&output_css_path, embedded_css)?;
+        info!("Wrote embedded CSS to: {}", output_css_path.display());
+
+        // Also write as input.css for compatibility
+        let input_css_path = output_style.join("input.css");
+        std::fs::write(&input_css_path, embedded_css)?;
+        info!("Wrote embedded CSS to: {}", input_css_path.display());
+
+        // If there's a style directory, still copy additional CSS files
         let style_dir = self.config.build.style_dir.clone();
         if style_dir.exists() {
-            let output_style = self.output_dir.join("style");
-            std::fs::create_dir_all(&output_style)?;
-
-            // Copy all CSS files from style directory
+            // Copy any additional CSS files (excluding output.css and input.css)
             for entry in std::fs::read_dir(&style_dir)? {
                 let entry = entry?;
                 let path = entry.path();
                 if path.extension().and_then(|s| s.to_str()) == Some("css") {
-                    let file_name = path.file_name().unwrap();
-                    let dest_path = output_style.join(file_name);
-                    std::fs::copy(&path, &dest_path)?;
-                    info!(
-                        "Copied style: {} to {}",
-                        path.display(),
-                        dest_path.display()
-                    );
+                    let file_name = path.file_name().unwrap().to_string_lossy();
+                    // Skip the main CSS files as they're now embedded
+                    if file_name != "output.css" && file_name != "input.css" {
+                        let dest_path = output_style.join(&*file_name);
+                        std::fs::copy(&path, &dest_path)?;
+                        info!(
+                            "Copied additional style: {} to {}",
+                            path.display(),
+                            dest_path.display()
+                        );
+                    }
                 }
             }
         }

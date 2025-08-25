@@ -11,6 +11,8 @@ default:
     @echo ""
     @echo "⚙️  Build & Manage:"
     @echo "  just build       - Build static site"
+    @echo "  just build-release - Build static site (release mode)"
+    @echo "  just build-standalone - Build standalone binary for distribution"
     @echo "  just build-styles - Build Tailwind CSS styles"
     @echo "  just watch-styles - Watch and rebuild styles"
     @echo "  just clean       - Clean generated site and styles"
@@ -48,15 +50,24 @@ watch-styles:
 build: build-styles
     @echo "🚀 Building static site with typstify-ssg..."
     cargo run --bin typstify-ssg
-    @echo "🎨 Copying compiled CSS to site directory..."
-    cp style/output.css site/style/
-    @echo "✅ Static site generated in site/ directory"
+    @echo "✅ Static site generated in site/ directory (CSS embedded in binary)"
 
-# Build static site in release mode (optimized)
-build-release:
+# Build static site in release mode (optimized, with embedded CSS)
+build-release: build-styles
     @echo "🚀 Building static site with typstify-ssg (release mode)..."
-    cargo run --release --bin typstify-ssg
-    @echo "✅ Static site generated in site/ directory"
+    cargo build --release --bin typstify-ssg
+    @echo "✅ Release binary built in target/release/typstify-ssg with embedded CSS"
+
+# Build standalone binary for distribution (includes embedded CSS)
+build-standalone: build-styles
+    @echo "🚀 Building standalone typstify-ssg binary..."
+    cargo build --release --bin typstify-ssg
+    @echo "📦 Creating standalone binary package..."
+    mkdir -p dist
+    cp target/release/typstify-ssg dist/
+    @echo "✅ Standalone binary ready in dist/typstify-ssg"
+    @echo "   This binary includes all required CSS files embedded"
+    @echo "   Users can run it without external dependencies"
 
 # Serve the generated static site
 serve:
@@ -71,8 +82,9 @@ serve-release:
 # Clean generated site
 clean:
     rm -rf site/
+    rm -rf dist/
     rm -f style/output.css
-    @echo "🧹 Cleaned site directory and generated styles"
+    @echo "🧹 Cleaned site directory, dist directory, and generated styles"
 
 # Create a new content file
 new-content name:
