@@ -9,13 +9,14 @@ description = "Static Site Generator for Typstify - supports both Markdown and T
 clap = { version = "4.5", features = ["derive"] }
 config = "0.15"
 
-# Leptos framework
+# Leptos framework and UI
 leptos = { version = "0.8", features = ["csr"] }
+singlestage = { version = "0.3", features = ["csr"] }
 
 # Content processing
-pulldown-cmark = { version = "0.13.0", features = ["html"] }
-typst-syntax = "0.13.1"
-regex = "1.10"
+pulldown-cmark = { version = "0.13", features = ["html"] }
+typst-syntax = "0.13"
+regex = "1.11"
 
 # File system and path handling
 walkdir = "2.5"
@@ -24,21 +25,21 @@ walkdir = "2.5"
 chrono = { version = "0.4", features = ["serde"] }
 
 # Error handling
-eyre = "0.6.12"
+eyre = "0.6"
 thiserror = "2.0"
 
 # Serialization
 serde = { version = "1.0", features = ["derive"] }
-serde_yaml = "0.9.33"
+serde_yaml = "0.9"
 serde_json = "1.0"
-toml = "0.9.5"
+toml = "0.8"
 
 # Atom feed generation
 atom_syndication = "0.12"
 
 # Logging
-tracing = "0.1.40"
-tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 # Search engine
 tantivy = "0.25"
