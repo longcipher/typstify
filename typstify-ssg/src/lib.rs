@@ -245,38 +245,36 @@ impl Site {
             match (a.metadata.get_date(), b.metadata.get_date()) {
                 (Some(date_a), Some(date_b)) => {
                     // Try to parse as RFC3339 first, then as simple date
-                    let parsed_a = chrono::DateTime::parse_from_rfc3339(date_a)
-                        .or_else(|_| {
-                            chrono::NaiveDate::parse_from_str(date_a, "%Y-%m-%d")
-                                .map(|d| d.and_hms_opt(0, 0, 0).unwrap().and_utc().into())
-                        });
-                    let parsed_b = chrono::DateTime::parse_from_rfc3339(date_b)
-                        .or_else(|_| {
-                            chrono::NaiveDate::parse_from_str(date_b, "%Y-%m-%d")
-                                .map(|d| d.and_hms_opt(0, 0, 0).unwrap().and_utc().into())
-                        });
-                    
+                    let parsed_a = chrono::DateTime::parse_from_rfc3339(date_a).or_else(|_| {
+                        chrono::NaiveDate::parse_from_str(date_a, "%Y-%m-%d")
+                            .map(|d| d.and_hms_opt(0, 0, 0).unwrap().and_utc().into())
+                    });
+                    let parsed_b = chrono::DateTime::parse_from_rfc3339(date_b).or_else(|_| {
+                        chrono::NaiveDate::parse_from_str(date_b, "%Y-%m-%d")
+                            .map(|d| d.and_hms_opt(0, 0, 0).unwrap().and_utc().into())
+                    });
+
                     match (parsed_a, parsed_b) {
-                        (Ok(a), Ok(b)) => b.cmp(&a), // Most recent first
-                        (Ok(_), Err(_)) => std::cmp::Ordering::Less,  // Valid date comes first
+                        (Ok(a), Ok(b)) => b.cmp(&a),                    // Most recent first
+                        (Ok(_), Err(_)) => std::cmp::Ordering::Less,    // Valid date comes first
                         (Err(_), Ok(_)) => std::cmp::Ordering::Greater, // Valid date comes first
                         (Err(_), Err(_)) => date_b.cmp(date_a), // Fallback to string comparison
                     }
                 }
-                (Some(_), None) => std::cmp::Ordering::Less,    // Items with dates come first
+                (Some(_), None) => std::cmp::Ordering::Less, // Items with dates come first
                 (None, Some(_)) => std::cmp::Ordering::Greater, // Items with dates come first
-                (None, None) => std::cmp::Ordering::Equal,      // No preference
+                (None, None) => std::cmp::Ordering::Equal,   // No preference
             }
         });
 
         // Generate feed
         let feed = crate::feed::create_feed(&self.config, &sorted_content);
-        
+
         // Write feed to file
         let feed_path = self.output_dir.join(&self.config.feed.filename);
         let feed_xml = feed.to_string();
         std::fs::write(&feed_path, feed_xml)?;
-        
+
         info!("Generated feed: {}", feed_path.display());
         Ok(())
     }
