@@ -1,0 +1,800 @@
+@import "tailwindcss";
+
+@theme {
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-info: hsl(var(--info));
+  --color-info-foreground: hsl(var(--info-foreground));
+  --color-warning: hsl(var(--warning));
+  --color-warning-foreground: hsl(var(--warning-foreground));
+  --color-error: hsl(var(--error));
+  --color-error-foreground: hsl(var(--error-foreground));
+  --color-success: hsl(var(--success));
+  --color-success-foreground: hsl(var(--success-foreground));
+  
+  --radius: 0.5rem;
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+}
+
+/* Singlestage CSS Variables */
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 221.2 83.2% 53.3%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221.2 83.2% 53.3%;
+    --radius: 0.5rem;
+    
+    /* Additional color utilities for alerts and status */
+    --info: 198.6 88.7% 48.4%;
+    --info-foreground: 210 40% 98%;
+    --warning: 47.9 95.8% 53.1%;
+    --warning-foreground: 26 83.3% 14.1%;
+    --error: 0 84.2% 60.2%;
+    --error-foreground: 210 40% 98%;
+    --success: 142.1 76.2% 36.3%;
+    --success-foreground: 355.7 100% 97.3%;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 217.2 91.2% 59.8%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 224.3 76.3% 48%;
+    
+    /* Additional color utilities for alerts and status (dark theme) */
+    --info: 198.6 88.7% 48.4%;
+    --info-foreground: 210 40% 98%;
+    --warning: 47.9 95.8% 53.1%;
+    --warning-foreground: 26 83.3% 14.1%;
+    --error: 0 72% 50.6%;
+    --error-foreground: 210 40% 98%;
+    --success: 142.1 70.6% 45.3%;
+    --success-foreground: 144.9 80.4% 10%;
+  }
+}
+
+/* Custom base styles */
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    height: 100%;
+  }
+  
+  body {
+    transition: color 0.3s, background-color 0.3s;
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    font-family: system-ui, -apple-system, sans-serif;
+    overflow-x: hidden;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+  }
+  
+  /* Code blocks styling */
+  pre {
+    @apply rounded-lg overflow-x-auto bg-muted p-4;
+  }
+  
+  code {
+    @apply text-sm font-mono bg-muted px-1 py-0.5 rounded;
+  }
+  
+  pre code {
+    @apply bg-transparent p-0;
+  }
+  
+  /* Markdown content styling */
+  .prose {
+    @apply max-w-none text-foreground;
+    line-height: 1.7;
+    color: inherit;
+  }
+  
+  .prose h1, .prose h2, .prose h3, .prose h4, .prose h5, .prose h6 {
+    @apply scroll-mt-24 text-foreground font-bold;
+    margin-top: 2em;
+    margin-bottom: 1em;
+    line-height: 1.2;
+  }
+  
+  .prose h1 {
+    @apply text-4xl mb-6 mt-0;
+    border-bottom: 2px solid hsl(var(--foreground) / 0.2);
+    padding-bottom: 0.5em;
+  }
+  
+  .prose h2 {
+    @apply text-3xl;
+    border-bottom: 1px solid hsl(var(--foreground) / 0.2);
+    padding-bottom: 0.25em;
+  }
+  
+  .prose h3 {
+    @apply text-2xl;
+  }
+  
+  .prose h4 {
+    @apply text-xl;
+  }
+  
+  .prose h5 {
+    @apply text-lg;
+  }
+  
+  .prose h6 {
+    @apply text-base;
+  }
+  
+  .prose p {
+    @apply mb-4 text-foreground;
+    line-height: 1.7;
+  }
+  
+  .prose ul, .prose ol {
+    @apply mb-4 pl-6;
+  }
+  
+  .prose ul {
+    list-style-type: disc;
+  }
+  
+  .prose ol {
+    list-style-type: decimal;
+  }
+  
+  .prose li {
+    @apply mb-2 text-foreground;
+    line-height: 1.6;
+  }
+  
+  .prose li::marker {
+    @apply text-primary;
+  }
+  
+  .prose blockquote {
+    @apply border-l-4 border-primary pl-4 py-2 my-6 bg-muted rounded-r-lg;
+    font-style: italic;
+  }
+  
+  .prose blockquote p {
+    @apply mb-0 text-foreground/80;
+  }
+  
+  .prose strong {
+    @apply font-bold text-foreground;
+  }
+  
+  .prose em {
+    @apply italic text-foreground;
+  }
+  
+  .prose a {
+    @apply text-primary hover:text-primary no-underline hover:underline transition-colors duration-200;
+  }
+  
+  .prose code:not(pre code) {
+    @apply bg-muted px-2 py-1 rounded text-sm font-mono text-primary border;
+  }
+  
+  .prose pre {
+    @apply bg-accent p-4 rounded-lg overflow-x-auto my-6 border;
+  }
+  
+  .prose pre code {
+    @apply bg-transparent p-0 text-sm font-mono text-foreground;
+    border: none;
+  }
+  
+  .prose table {
+    @apply w-full border-collapse border border-border my-6;
+  }
+  
+  .prose th {
+    @apply bg-muted border border-border px-4 py-2 text-left font-semibold;
+  }
+  
+  .prose td {
+    @apply border border-border px-4 py-2;
+  }
+  
+  .prose hr {
+    @apply border-0 border-t border-border my-8;
+  }
+  
+  .prose img {
+    @apply max-w-full h-auto rounded-lg shadow-lg my-6;
+  }
+  
+  /* Alert boxes styling */
+  .prose .alert {
+    @apply rounded-lg p-4 mb-4 border-l-4;
+  }
+  
+  .prose .alert-info {
+    background-color: hsl(var(--info) / 0.1);
+    border-color: hsl(var(--info));
+    color: hsl(var(--info-foreground));
+  }
+  
+  .prose .alert-warning {
+    background-color: hsl(var(--warning) / 0.1);
+    border-color: hsl(var(--warning));
+    color: hsl(var(--warning-foreground));
+  }
+  
+  .prose .alert-error {
+    background-color: hsl(var(--error) / 0.1);
+    border-color: hsl(var(--error));
+    color: hsl(var(--error-foreground));
+  }
+  
+  .prose .alert-success {
+    background-color: hsl(var(--success) / 0.1);
+    border-color: hsl(var(--success));
+    color: hsl(var(--success-foreground));
+  }
+  
+  /* Navigation styling */
+  nav a {
+    @apply transition-colors duration-200;
+  }
+  
+  /* Print styles */
+  @media print {
+    .no-print {
+      display: none !important;
+    }
+  }
+}
+
+/* Custom component styles */
+@layer components {
+  /* mdBook-style layout */
+  .book-container {
+    @apply flex min-h-screen relative;
+  }
+  
+  /* Sidebar Navigation */
+  .sidebar {
+    @apply w-72 bg-muted border-r border-border flex flex-col fixed left-0 top-0 h-full z-30;
+    transition: transform 0.3s ease;
+    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+  }
+  
+  .sidebar-header {
+    @apply px-6 py-5 border-b border-border bg-card;
+  }
+  
+  .sidebar-title {
+    @apply text-lg font-bold text-primary no-underline hover:text-primary tracking-tight;
+  }
+  
+  .search-box {
+    @apply px-6 py-4 border-b border-border bg-card;
+  }
+  
+  .search-input {
+    @apply w-full text-sm px-4 py-2 rounded-md bg-muted border border-border transition-colors;
+    font-size: 0.875rem;
+  }
+  
+  .search-input:focus {
+    @apply outline-none ring-2 ring-ring border-primary;
+  }
+  
+  .search-input::placeholder {
+    @apply text-foreground/50;
+  }
+  
+  .sidebar-nav {
+    @apply flex-1 overflow-y-auto px-4 py-6 bg-muted;
+  }
+  
+  .nav-section {
+    @apply mb-6;
+  }
+  
+  .nav-section-header {
+    @apply flex items-center justify-between cursor-pointer select-none;
+  }
+  
+  .nav-section-title {
+    @apply text-xs font-bold text-foreground/60 uppercase tracking-wider mb-0 px-3 py-2 flex items-center gap-2;
+  }
+  
+  .nav-section-toggle {
+    @apply text-foreground/40 transition-transform duration-200 text-sm;
+  }
+  
+  .nav-section-toggle.expanded {
+    @apply rotate-90;
+  }
+  
+  .nav-section-link {
+    @apply text-foreground hover:text-primary transition-colors duration-200 no-underline font-medium text-base;
+  }
+  
+  .nav-section-content {
+    @apply transition-all duration-300 ease-in-out overflow-hidden;
+    max-height: 1000px;
+  }
+  
+  .nav-section-content.collapsed {
+    max-height: 0;
+    @apply mb-0;
+  }
+  
+  .nav-root {
+    @apply mb-8;
+  }
+  
+  .nav-list {
+    @apply list-none p-0 m-0 space-y-0.5;
+  }
+  
+  .nav-item {
+    @apply block;
+  }
+  
+  .nav-link {
+    @apply block px-3 py-2.5 text-sm text-foreground hover:bg-primary/10 hover:text-primary rounded-lg transition-all duration-200 no-underline font-medium border-l-2 border-transparent hover:border-primary/30;
+  }
+  
+  .nav-link.active {
+    @apply bg-primary/15 text-primary font-semibold border-primary;
+  }
+  
+  /* Main Content Area */
+  .main-content {
+    @apply flex-1 flex flex-col;
+    margin-left: 288px; /* sidebar width (18rem = 288px) */
+  }
+  
+  .topbar {
+    @apply bg-card border-b border-border px-6 py-4 flex items-center gap-4 sticky top-0 z-20;
+  }
+  
+  .menu-toggle {
+    @apply px-3 py-2 rounded-md text-sm font-medium transition-colors lg:hidden;
+    background-color: transparent;
+    color: hsl(var(--foreground));
+  }
+  
+  .menu-toggle:hover {
+    background-color: hsl(var(--accent));
+  }
+  
+  .content-area {
+    @apply flex-1 px-8 py-10 max-w-4xl mx-auto w-full;
+  }
+  
+  .content-header {
+    @apply mb-8;
+  }
+  
+  .content-title {
+    @apply text-3xl font-bold text-foreground mb-2;
+  }
+  
+  .content-subtitle {
+    @apply text-lg text-foreground/70;
+  }
+  
+  /* Navigation Buttons */
+  .nav-buttons {
+    @apply flex justify-between items-center mt-12 pt-8 border-t border-border gap-4;
+  }
+  
+  .nav-button {
+    @apply flex items-center gap-3 p-4 bg-muted hover:bg-accent rounded-lg border border-border transition-all duration-200 no-underline max-w-sm;
+  }
+  
+  .nav-button-next {
+    @apply text-right ml-auto;
+  }
+  
+  .nav-button-content {
+    @apply flex flex-col;
+  }
+  
+  .nav-button-label {
+    @apply text-xs font-medium text-foreground/60 uppercase tracking-wide;
+  }
+  
+  .nav-button-title {
+    @apply text-sm font-medium text-foreground;
+  }
+  
+  .nav-button-icon {
+    @apply text-lg text-primary;
+  }
+  
+  .content-footer {
+    @apply text-center text-sm text-foreground/60 mt-12 pt-8 border-t border-border;
+  }
+  
+  /* Welcome Section for Index */
+  .welcome-section {
+    @apply text-center mb-16 py-12;
+    background: linear-gradient(135deg, hsl(var(--primary) / 0.05) 0%, hsl(var(--secondary) / 0.05) 100%);
+    border-radius: 1rem;
+    margin-bottom: 4rem;
+  }
+  
+  .welcome-section h1 {
+    @apply text-5xl font-bold text-primary mb-6 leading-tight;
+    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--secondary)) 100%);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  
+  .welcome-section p {
+    @apply text-xl text-foreground/70 max-w-3xl mx-auto leading-relaxed;
+  }
+  
+  .content-list {
+    @apply mb-16;
+  }
+  
+  .content-list h2 {
+    @apply text-3xl font-bold text-foreground mb-8 text-center;
+  }
+  
+  /* Documentation Cards */
+  .docs-grid {
+    @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6;
+  }
+  
+  .doc-card {
+    @apply bg-card border border-border rounded-xl p-6 transition-all duration-300 hover:shadow-xl hover:border-primary/50;
+  }
+  
+  .doc-card:hover {
+    transform: translateY(-4px);
+  }
+  
+  .doc-card-badge {
+    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold mb-4;
+    background-color: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+  }
+  
+  .doc-card-title {
+    @apply text-lg font-bold mb-3 text-foreground hover:text-primary transition-colors duration-200;
+  }
+  
+  .doc-card-description {
+    @apply text-foreground/70 text-sm leading-relaxed mb-4 flex-grow;
+  }
+  
+  .doc-card-tags {
+    @apply flex flex-wrap gap-2 mt-auto;
+  }
+  
+  .doc-card-tag {
+    @apply inline-flex items-center rounded-md border px-2 py-1 text-xs text-foreground/60;
+    border-color: hsl(var(--border));
+  }
+  
+  .content-list h2 {
+    @apply text-2xl font-bold text-foreground mb-6;
+  }
+  
+  /* Mobile Responsive */
+  @media (max-width: 1024px) {
+    .main-content {
+      margin-left: 0;
+    }
+    
+    .sidebar {
+      transform: translateX(-100%);
+    }
+    
+    .sidebar.sidebar-open {
+      transform: translateX(0);
+    }
+    
+    .content-area {
+      @apply px-4 py-6;
+    }
+  }
+  
+  /* Documentation specific components */
+  .doc-nav {
+    @apply bg-muted border-r border-border;
+  }
+  
+  .doc-content {
+    @apply max-w-none;
+    /* prose and prose-lg are custom classes, not utilities */
+  }
+  
+  .doc-header {
+    @apply bg-card border-b border-border sticky top-0 z-10;
+  }
+  
+  .doc-footer {
+    @apply bg-muted border-t border-border mt-auto;
+  }
+  
+  /* Code syntax highlighting adjustments */
+  .highlight {
+    @apply rounded-md overflow-hidden;
+  }
+  
+  .highlight pre {
+    @apply p-4 m-0;
+  }
+  
+  /* Table of contents */
+  .toc {
+    @apply bg-muted rounded-lg p-4 border border-border;
+  }
+  
+  .toc ul {
+    @apply list-none p-0 m-0;
+  }
+  
+  .toc li {
+    @apply py-1;
+  }
+  
+  .toc a {
+    @apply text-foreground hover:text-primary transition-colors duration-200;
+  }
+  
+  /* Breadcrumb navigation */
+  .breadcrumb {
+    @apply flex items-center space-x-2 text-sm text-foreground/70;
+  }
+  
+  .breadcrumb a {
+    @apply text-primary hover:text-primary no-underline;
+  }
+  
+  .breadcrumb-separator {
+    @apply text-foreground/50;
+  }
+  
+  /* Alert boxes */
+  .alert-info {
+    @apply rounded-lg p-4 border-l-4;
+    background-color: hsl(var(--info) / 0.1);
+    border-color: hsl(var(--info));
+    color: hsl(var(--info-foreground));
+  }
+  
+  .alert-warning {
+    @apply rounded-lg p-4 border-l-4;
+    background-color: hsl(var(--warning) / 0.1);
+    border-color: hsl(var(--warning));
+    color: hsl(var(--warning-foreground));
+  }
+  
+  .alert-error {
+    @apply rounded-lg p-4 border-l-4;
+    background-color: hsl(var(--error) / 0.1);
+    border-color: hsl(var(--error));
+    color: hsl(var(--error-foreground));
+  }
+  
+  .alert-success {
+    @apply rounded-lg p-4 border-l-4;
+    background-color: hsl(var(--success) / 0.1);
+    border-color: hsl(var(--success));
+    color: hsl(var(--success-foreground));
+  }
+
+  /* Typst-specific styles */
+  .typst-content {
+    @apply max-w-none;
+  }
+  
+  .typst-heading-1 {
+    @apply text-4xl font-bold text-foreground mb-6 mt-8 scroll-mt-24;
+    border-bottom: 2px solid hsl(var(--foreground) / 0.2);
+    padding-bottom: 0.5em;
+  }
+  
+  .typst-heading-2 {
+    @apply text-3xl font-bold text-foreground mb-4 mt-6 scroll-mt-24;
+    border-bottom: 1px solid hsl(var(--foreground) / 0.2);
+    padding-bottom: 0.25em;
+  }
+  
+  .typst-heading-3 {
+    @apply text-2xl font-bold text-foreground mb-3 mt-5 scroll-mt-24;
+  }
+  
+  .typst-heading-4 {
+    @apply text-xl font-bold text-foreground mb-2 mt-4 scroll-mt-24;
+  }
+  
+  .typst-paragraph {
+    @apply mb-4 text-foreground leading-relaxed;
+  }
+  
+  .typst-strong {
+    @apply font-bold text-foreground;
+  }
+  
+  .typst-emphasis {
+    @apply italic text-foreground;
+  }
+  
+  .typst-inline-code {
+    @apply bg-muted px-2 py-1 rounded text-sm font-mono text-primary border;
+  }
+  
+  .typst-link {
+    @apply text-primary hover:text-primary no-underline hover:underline transition-colors duration-200;
+  }
+  
+  .typst-list {
+    @apply list-disc pl-6 mb-4 space-y-1;
+  }
+  
+  .typst-ordered-list {
+    @apply list-decimal pl-6 mb-4 space-y-1;
+  }
+  
+  .typst-list-item {
+    @apply text-foreground leading-relaxed;
+  }
+  
+  .typst-list-item::marker {
+    @apply text-primary;
+  }
+  
+  .typst-blockquote {
+    @apply border-l-4 border-primary pl-4 py-2 my-4 bg-muted rounded-r-lg italic;
+  }
+  
+  .typst-blockquote p {
+    @apply mb-0 text-foreground/80;
+  }
+  
+  .typst-hr {
+    @apply border-0 border-t border-border my-6;
+  }
+  
+  .typst-math-inline {
+    @apply bg-muted px-2 py-1 rounded text-sm font-mono text-secondary border;
+    font-family: 'Computer Modern', 'Latin Modern Math', serif;
+  }
+  
+  /* Typst-specific table styling */
+  .typst-table {
+    @apply w-full border-collapse border border-border my-6 rounded-lg overflow-hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+  
+  .typst-table-header {
+    @apply bg-primary/10 border border-border px-4 py-3 text-left font-bold text-foreground;
+    background: linear-gradient(135deg, hsl(var(--primary) / 0.1) 0%, hsl(var(--secondary) / 0.05) 100%);
+  }
+  
+  .typst-table-cell {
+    @apply border border-border px-4 py-3 text-foreground;
+    vertical-align: top;
+  }
+  
+  .typst-table tbody tr:nth-child(even) {
+    @apply bg-card;
+  }
+  
+  .typst-table tbody tr:nth-child(odd) {
+    @apply bg-muted/50;
+  }
+  
+  .typst-table tbody tr:hover {
+    @apply bg-muted transition-colors duration-200;
+  }
+  
+  /* Typst line (horizontal rule) styling */
+  .typst-line {
+    @apply border-0 border-t-2 border-border my-8 w-full;
+    background: linear-gradient(90deg, transparent 0%, hsl(var(--foreground) / 0.3) 20%, hsl(var(--foreground) / 0.3) 80%, transparent 100%);
+    height: 2px;
+    border: none;
+  }
+}
+
+/* Custom utilities */
+@layer utilities {
+  /* Theme-aware utilities */
+  .text-theme-primary {
+    @apply text-primary;
+  }
+  
+  .bg-theme-base {
+    @apply bg-card;
+  }
+  
+  .border-theme {
+    @apply border-border;
+  }
+  
+  /* Print utilities */
+  .print-hidden {
+    @media print {
+      display: none !important;
+    }
+  }
+  
+  .print-visible {
+    @media screen {
+      display: none !important;
+    }
+    @media print {
+      display: block !important;
+    }
+  }
+}
+
+/* Dark theme specific adjustments */
+@media (prefers-color-scheme: dark) {
+  [data-theme="dark"] {
+    /* Custom dark theme adjustments if needed */
+  }
+}
+
+/* Dracula theme specific adjustments */
+[data-theme="dracula"] {
+  /* Dracula theme specific styles */
+  .highlight {
+    @apply bg-muted;
+  }
+}
