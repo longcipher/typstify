@@ -59,7 +59,7 @@ pub fn create_feed(config: &AppConfig, content: &[Content]) -> Feed {
 
         // Set entry ID and link
         let content_url = format!(
-            "{}/{}.html",
+            "{}/{}",
             config.site.base_url.trim_end_matches('/'),
             content_item.slug()
         );

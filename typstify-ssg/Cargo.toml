@@ -44,10 +44,13 @@ tracing-subscriber = { workspace = true, features = ["env-filter"] }
 # Search engine
 tantivy = { workspace = true }
 
+getrandom = { version = "0.2", features = ["js"] }
+
 [dev-dependencies]
 tempfile = { workspace = true }
 
 [features]
 default = []
+csr = []
 opengraph = []
 optimize = []

@@ -145,7 +145,7 @@ impl SearchEngine {
             self.title_field => content.meta().get_title(),
             self.description_field => content.meta().get_description(),
             self.content_field => plain_content,
-            self.url_field => format!("/{}.html", content.slug()),
+            self.url_field => format!("/{}", content.slug()),
             self.tags_field => content.meta().tags.join(" "),
             self.category_field => content.meta().category.clone().unwrap_or_default(),
             self.date_field => content.meta().date.clone().unwrap_or_default(),

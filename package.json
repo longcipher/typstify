@@ -1,35 +1,5 @@
 {
-  "name": "typstify",
-  "version": "0.1.0",
-  "description": "A static site generator for Typst and Markdown documentation",
-  "type": "module",
-  "scripts": {
-    "dev": "bunx @tailwindcss/cli --input ./style/input.css --output ./style/output.css --watch",
-    "build": "bunx @tailwindcss/cli --input ./style/input.css --output ./style/output.css --minify"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/longcipher/typstify.git"
-  },
-  "keywords": [
-    "static-site-generator",
-    "typst",
-    "markdown",
-    "documentation",
-    "tailwindcss",
-    "daisyui"
-  ],
-  "author": "longcipher",
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/longcipher/typstify/issues"
-  },
-  "homepage": "https://github.com/longcipher/typstify#readme",
   "devDependencies": {
-    "@tailwindcss/cli": "^4.1",
-    "tailwindcss": "^4.1"
-  },
-  "engines": {
-    "bun": ">=1.0.0"
+    "@playwright/test": "^1.57.0"
   }
 }

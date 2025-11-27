@@ -5,7 +5,7 @@ default:
     @echo "🚀 Typstify SSG Commands"
     @echo ""
     @echo "📖 Documentation Generation:"
-    @echo "  just dev         - Generate documentation site with styles"
+    @echo "  just dev         - Generate documentation site"
     @echo "  just docs        - Generate and serve documentation"
     @echo "  just serve       - Serve generated documentation"
     @echo ""
@@ -13,9 +13,7 @@ default:
     @echo "  just build       - Build static site"
     @echo "  just build-release - Build static site (release mode)"
     @echo "  just build-standalone - Build standalone binary for distribution"
-    @echo "  just build-styles - Build Tailwind CSS styles"
-    @echo "  just watch-styles - Watch and rebuild styles"
-    @echo "  just clean       - Clean generated site and styles"
+    @echo "  just clean       - Clean generated site"
     @echo "  just new-content - Create new content file"
     @echo ""
     @echo "🛠️  Setup:"
@@ -26,48 +24,34 @@ default:
 # Install dependencies
 install:
     cargo build
-    bun install
 
 # Generate documentation site (default workflow)
-dev: build-styles build
-    @echo "📖 Generated documentation site with styles. Use 'just serve' to serve it."
+dev: build
+    @echo "📖 Generated documentation site. Use 'just serve' to serve it."
 
 # Generate and serve documentation
-docs: build-styles build serve
-
-# Build Tailwind CSS styles
-build-styles:
-    @echo "🎨 Building Tailwind CSS styles..."
-    bunx tailwindcss --input ./style/input.css --output ./style/output.css --minify
-    @echo "✅ Styles built successfully"
-
-# Watch and rebuild styles on changes
-watch-styles:
-    @echo "👀 Watching for style changes..."
-    bunx tailwindcss --input ./style/input.css --output ./style/output.css --watch
+docs: build serve
 
 # Build static site using typstify-ssg
-build: build-styles
+build:
     @echo "🚀 Building static site with typstify-ssg..."
     cargo run --bin typstify-ssg
-    @echo "✅ Static site generated in site/ directory (CSS embedded in binary)"
+    @echo "✅ Static site generated in site/ directory"
 
 # Build static site in release mode (optimized, with embedded CSS)
-build-release: build-styles
+build-release:
     @echo "🚀 Building static site with typstify-ssg (release mode)..."
     cargo build --release --bin typstify-ssg
-    @echo "✅ Release binary built in target/release/typstify-ssg with embedded CSS"
+    @echo "✅ Release binary built in target/release/typstify-ssg"
 
 # Build standalone binary for distribution (includes embedded CSS)
-build-standalone: build-styles
+build-standalone:
     @echo "🚀 Building standalone typstify-ssg binary..."
     cargo build --release --bin typstify-ssg
     @echo "📦 Creating standalone binary package..."
     mkdir -p dist
     cp target/release/typstify-ssg dist/
     @echo "✅ Standalone binary ready in dist/typstify-ssg"
-    @echo "   This binary includes all required CSS files embedded"
-    @echo "   Users can run it without external dependencies"
 
 # Serve the generated static site
 serve:
@@ -83,8 +67,7 @@ serve-release:
 clean:
     rm -rf site/
     rm -rf dist/
-    rm -f style/output.css
-    @echo "🧹 Cleaned site directory, dist directory, and generated styles"
+    @echo "🧹 Cleaned site directory and dist directory"
 
 # Create a new content file
 new-content name:

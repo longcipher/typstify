@@ -11,7 +11,7 @@ resolver = "2"
 
 [workspace.dependencies]
 # CLI
-clap = "4.5"
+clap = "4.5.53"
 config = "0.15"
 
 # Core
@@ -34,10 +34,10 @@ wasm-bindgen-futures = "0.4"
 web-sys = "0.3"
 
 # Leptos (CSR) and UI
-leptos = "0.8"
+leptos = "0.8.14"
 leptos_meta = "0.8"
 leptos_router = "0.8"
-singlestage = "0.3"
+singlestage = "0.3.10"
 
 # Content processing
 pulldown-cmark = "0.13"
@@ -76,8 +76,8 @@ panic = "abort"
 # Project identifier
 name = "typstify"
 # Packages/crates
-lib-package = "typstify-site"
-bin-package = "typstify-site"
+lib-package = "typstify-ssg"
+bin-package = "typstify-ssg"
 # Output naming
 output-name = "typstify"
 # Serve/build directories
