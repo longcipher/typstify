@@ -1,0 +1,27 @@
+{
+  "lockfileVersion": 1,
+  "configVersion": 1,
+  "workspaces": {
+    "": {
+      "name": "typstify",
+      "devDependencies": {
+        "tailwindcss": "^4.1.18",
+      },
+    },
+    "crates/typstify-search-wasm": {
+      "name": "typstify-search-wasm",
+      "version": "0.1.0",
+    },
+    "crates/typstify-ui": {
+      "name": "typstify-ui",
+      "version": "0.1.0",
+    },
+  },
+  "packages": {
+    "tailwindcss": ["tailwindcss@4.1.18", "https://registry.npmmirror.com/tailwindcss/-/tailwindcss-4.1.18.tgz", {}, "sha512-4+Z+0yiYyEtUVCScyfHCxOYP06L5Ne+JiHhY2IjR2KWMIWhJOYZKLSGZaP5HkZ8+bY0cxfzwDE5uOmzFXyIwxw=="],
+
+    "typstify-search-wasm": ["typstify-search-wasm@workspace:crates/typstify-search-wasm"],
+
+    "typstify-ui": ["typstify-ui@workspace:crates/typstify-ui"],
+  }
+}

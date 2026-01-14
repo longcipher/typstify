@@ -1,0 +1,20 @@
+[package]
+name = "typstify-generator"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Static site generation engine"
+
+[dependencies]
+typstify-core.workspace = true
+typstify-parser.workspace = true
+
+chrono = { workspace = true, features = ["serde"] }
+rayon.workspace = true
+rss.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+tempfile = { workspace = true }

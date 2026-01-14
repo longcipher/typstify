@@ -1,0 +1,11 @@
+{
+  "name": "typstify",
+  "private": true,
+  "workspaces": ["crates/typstify-ui", "crates/typstify-search-wasm"],
+  "scripts": {
+    "build:css": "tailwindcss -i ./style/main.css -o ./assets/main.css --minify"
+  },
+  "devDependencies": {
+    "tailwindcss": "^4.1.18"
+  }
+}

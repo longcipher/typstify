@@ -1,0 +1,25 @@
+# Typstify Example Site Configuration
+# This demonstrates all available configuration options.
+
+[site]
+title = "My Typstify Blog"
+description = "A sample blog built with Typstify"
+base_url = "https://example.com"
+default_language = "en"
+languages = ["en", "zh"]
+author = "Typstify Team"
+
+[build]
+output_dir = "public"
+minify = false
+syntax_theme = "base16-ocean.dark"
+drafts = false
+
+[search]
+enabled = true
+index_fields = ["title", "body", "tags"]
+chunk_size = 65536
+
+[rss]
+enabled = true
+limit = 20

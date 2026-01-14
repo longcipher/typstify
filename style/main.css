@@ -1,0 +1,78 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #3b82f6;
+  --color-secondary: #64748b;
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+}
+
+/* Search component styles */
+.search-container {
+  @apply relative w-full max-w-md;
+}
+
+.search-input {
+  @apply w-full px-4 py-2 border border-gray-300 rounded-lg;
+  @apply focus:outline-none focus:ring-2 focus:ring-primary;
+}
+
+.search-results {
+  @apply absolute top-full left-0 right-0 mt-2;
+  @apply bg-white border border-gray-200 rounded-lg shadow-lg;
+  @apply max-h-96 overflow-y-auto;
+}
+
+.search-result-item {
+  @apply p-4 border-b border-gray-100 last:border-b-0;
+  @apply hover:bg-gray-50 transition-colors;
+}
+
+/* Article prose styles */
+.prose {
+  @apply max-w-none;
+}
+
+.prose h1 {
+  @apply text-3xl font-bold mb-4;
+}
+
+.prose h2 {
+  @apply text-2xl font-semibold mb-3 mt-8;
+}
+
+.prose h3 {
+  @apply text-xl font-semibold mb-2 mt-6;
+}
+
+.prose p {
+  @apply mb-4 leading-relaxed;
+}
+
+.prose code {
+  @apply bg-gray-100 px-1 py-0.5 rounded text-sm font-mono;
+}
+
+.prose pre {
+  @apply bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto mb-4;
+}
+
+.prose pre code {
+  @apply bg-transparent p-0;
+}
+
+.prose a {
+  @apply text-primary underline hover:no-underline;
+}
+
+.prose ul {
+  @apply list-disc list-inside mb-4;
+}
+
+.prose ol {
+  @apply list-decimal list-inside mb-4;
+}
+
+.prose blockquote {
+  @apply border-l-4 border-gray-300 pl-4 italic text-gray-600 mb-4;
+}

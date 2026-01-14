@@ -1,0 +1,197 @@
+//! Typstify CLI
+//!
+//! Single binary static site generator with Typst/Markdown support.
+
+use clap::Parser;
+use color_eyre::eyre::Result;
+
+mod cmd;
+mod server;
+
+#[derive(Parser)]
+#[command(
+    name = "typstify",
+    version,
+    about = "A high-performance static site generator"
+)]
+struct Cli {
+    /// Path to configuration file
+    #[arg(short, long, default_value = "config.toml")]
+    config: std::path::PathBuf,
+
+    /// Increase verbosity (-v, -vv, -vvv)
+    #[arg(short, long, action = clap::ArgAction::Count)]
+    verbose: u8,
+
+    #[command(subcommand)]
+    command: Commands,
+}
+
+#[derive(clap::Subcommand)]
+enum Commands {
+    /// Build the static site for production
+    Build {
+        /// Output directory
+        #[arg(short, long, default_value = "public")]
+        output: std::path::PathBuf,
+        /// Include draft posts
+        #[arg(long)]
+        drafts: bool,
+    },
+    /// Start development server with live reload
+    Watch {
+        /// Port to listen on
+        #[arg(short, long, default_value_t = 3000)]
+        port: u16,
+        /// Open browser automatically
+        #[arg(long)]
+        open: bool,
+    },
+    /// Create new content from template
+    New {
+        /// Path for the new content (e.g., posts/my-article)
+        path: std::path::PathBuf,
+        /// Template type (post, page, typst)
+        #[arg(short, long, default_value = "post")]
+        template: String,
+    },
+    /// Validate configuration and content
+    Check {
+        /// Treat warnings as errors
+        #[arg(long)]
+        strict: bool,
+    },
+}
+
+fn init_tracing(verbose: u8) {
+    use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+
+    let level = match verbose {
+        0 => tracing::Level::WARN,
+        1 => tracing::Level::INFO,
+        2 => tracing::Level::DEBUG,
+        _ => tracing::Level::TRACE,
+    };
+
+    tracing_subscriber::registry()
+        .with(tracing_subscriber::fmt::layer())
+        .with(tracing_subscriber::EnvFilter::from_default_env().add_directive(level.into()))
+        .init();
+}
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    color_eyre::install()?;
+
+    let cli = Cli::parse();
+    init_tracing(cli.verbose);
+
+    match cli.command {
+        Commands::Build { output, drafts } => {
+            cmd::build::run(&cli.config, &output, drafts)?;
+        }
+        Commands::Watch { port, open } => {
+            cmd::watch::run(&cli.config, port, open).await?;
+        }
+        Commands::New { path, template } => {
+            cmd::new::run(&path, &template)?;
+        }
+        Commands::Check { strict } => {
+            cmd::check::run(&cli.config, strict)?;
+        }
+    }
+
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use clap::Parser;
+
+    use super::*;
+
+    #[test]
+    fn test_cli_build_command_parsing() {
+        let args = ["typstify", "build", "--output", "dist"];
+        let cli = Cli::parse_from(args);
+
+        assert_eq!(cli.config, std::path::PathBuf::from("config.toml"));
+        assert_eq!(cli.verbose, 0);
+
+        match cli.command {
+            Commands::Build { output, drafts } => {
+                assert_eq!(output, std::path::PathBuf::from("dist"));
+                assert!(!drafts);
+            }
+            _ => panic!("Expected Build command"),
+        }
+    }
+
+    #[test]
+    fn test_cli_build_with_drafts() {
+        let args = ["typstify", "build", "--drafts"];
+        let cli = Cli::parse_from(args);
+
+        match cli.command {
+            Commands::Build { drafts, .. } => {
+                assert!(drafts);
+            }
+            _ => panic!("Expected Build command"),
+        }
+    }
+
+    #[test]
+    fn test_cli_watch_command_parsing() {
+        let args = ["typstify", "watch", "--port", "8080", "--open"];
+        let cli = Cli::parse_from(args);
+
+        match cli.command {
+            Commands::Watch { port, open } => {
+                assert_eq!(port, 8080);
+                assert!(open);
+            }
+            _ => panic!("Expected Watch command"),
+        }
+    }
+
+    #[test]
+    fn test_cli_new_command_parsing() {
+        let args = ["typstify", "new", "posts/my-article", "--template", "typst"];
+        let cli = Cli::parse_from(args);
+
+        match cli.command {
+            Commands::New { path, template } => {
+                assert_eq!(path, std::path::PathBuf::from("posts/my-article"));
+                assert_eq!(template, "typst");
+            }
+            _ => panic!("Expected New command"),
+        }
+    }
+
+    #[test]
+    fn test_cli_check_command_parsing() {
+        let args = ["typstify", "check", "--strict"];
+        let cli = Cli::parse_from(args);
+
+        match cli.command {
+            Commands::Check { strict } => {
+                assert!(strict);
+            }
+            _ => panic!("Expected Check command"),
+        }
+    }
+
+    #[test]
+    fn test_cli_verbosity_flags() {
+        let args = ["typstify", "-vvv", "build"];
+        let cli = Cli::parse_from(args);
+        assert_eq!(cli.verbose, 3);
+    }
+
+    #[test]
+    fn test_cli_custom_config_path() {
+        let args = ["typstify", "--config", "site.toml", "build"];
+        let cli = Cli::parse_from(args);
+        assert_eq!(cli.config, std::path::PathBuf::from("site.toml"));
+    }
+}
