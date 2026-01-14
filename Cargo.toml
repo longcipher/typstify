@@ -7,81 +7,64 @@ version = "0.1.0"
 edition = "2024"
 authors = ["longcipher"]
 license = "Apache-2.0"
+description = "A high-performance static site generator with Typst/Markdown support"
 repository = "https://github.com/longcipher/typstify"
 homepage = "https://github.com/longcipher/typstify"
 readme = "README.md"
-keywords = ["static-site-generator", "typst", "markdown", "ssg"]
+keywords = ["static-site", "typst", "markdown", "ssg"]
 categories = ["web-programming", "command-line-utilities"]
+exclude = ["target", "node_modules", ".rumdl_cache", "tmp"]
 
 [workspace.dependencies]
-# CLI & Config
+# Local crates
+typstify-core = { path = "crates/typstify-core", version = "0.1.0" }
+typstify-generator = { path = "crates/typstify-generator", version = "0.1.0" }
+typstify-parser = { path = "crates/typstify-parser", version = "0.1.0" }
+typstify-search = { path = "crates/typstify-search", version = "0.1.0" }
+typstify-search-wasm = { path = "crates/typstify-search-wasm", version = "0.1.0" }
+typstify-ui = { path = "crates/typstify-ui", version = "0.1.0" }
+
+# external crates
+arc-swap = "1.8.0"
+axum = "0.8.8"
+chrono = "0.4.42"
 clap = "4.5.54"
 color-eyre = "0.6.5"
 config = "0.15.19"
-eyre = "0.6.12"
-thiserror = "2.0.17"
-
-# Async & Runtime
-tokio = "1.49.0"
-
-# Serialization
-serde = "1.0.228"
-serde_json = "1.0.149"
-serde_yaml = "0.9.33"
-toml = "0.9.8"
-
-# Content Processing
-pulldown-cmark = "0.13.0"
-syntect = "5.3.0"
-typst = "0.14.2"
-typst-assets = { version = "0.14.2", features = ["fonts"] }
-typst-svg = "0.14.2"
-
-# Search
-tantivy = "0.25.0"
-
-# WASM
 console_error_panic_hook = "0.1.7"
+eyre = "0.6.12"
 gloo-net = "0.6.0"
 js-sys = "0.3.83"
-serde-wasm-bindgen = "0.6.5"
-wasm-bindgen = "0.2.106"
-wasm-bindgen-futures = "0.4.56"
-
-# Web & Frontend
 leptos = "0.8.15"
 leptos_meta = "0.8.5"
 leptos_router = "0.8.11"
-
-# Dev Server (embedded in CLI)
-axum = "0.8.8"
-tower-http = "0.6"
-
-# Utilities
-arc-swap = "1.8.0"
-chrono = "0.4.42"
 notify = "8.2.0"
 open = "5.3.3"
+pulldown-cmark = "0.13.0"
 rayon = "1.11.0"
 rss = "2.0.12"
 scc = "3.4.10"
+serde = "1.0.228"
+serde-wasm-bindgen = "0.6.5"
+serde_json = "1.0.149"
+serde_yaml = "0.9.33"
+syntect = "5.3.0"
+tantivy = "0.25.0"
 tempfile = "3.20.0"
-
-# Observability
+thiserror = "2.0.17"
+tokio = "1.49.0"
 tokio-stream = "0.1.18"
+toml = "0.9.8"
+tower-http = "0.6"
 tracing = "0.1.44"
 tracing-subscriber = "0.3.22"
+typst = "0.14.2"
+typst-svg = "0.14.2"
 walkdir = "2.5.0"
+wasm-bindgen = "0.2.106"
+wasm-bindgen-futures = "0.4.56"
 wasm-bindgen-test = "0.3.56"
 web-sys = "0.3.83"
-
-# Internal crates
-typstify-core = { path = "crates/typstify-core" }
-typstify-generator = { path = "crates/typstify-generator" }
-typstify-parser = { path = "crates/typstify-parser" }
-typstify-search = { path = "crates/typstify-search" }
-typstify-search-wasm = { path = "crates/typstify-search-wasm" }
-typstify-ui = { path = "crates/typstify-ui" }
 
 [profile.release]
 lto = true

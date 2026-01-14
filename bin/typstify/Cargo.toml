@@ -9,7 +9,7 @@ homepage.workspace = true
 readme.workspace = true
 keywords.workspace = true
 categories.workspace = true
-description = "A high-performance static site generator with Typst/Markdown support"
+description.workspace = true
 
 [[bin]]
 name = "typstify"

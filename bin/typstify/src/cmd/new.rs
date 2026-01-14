@@ -5,6 +5,9 @@ use std::{fs, path::Path};
 use chrono::Utc;
 use color_eyre::eyre::{Result, WrapErr};
 
+/// Run the new command.
+///
+/// Creates a new content file with boilerplate frontmatter.
 pub fn run(path: &Path, template: &str) -> Result<()> {
     tracing::info!(?path, template, "Creating new content");
 

@@ -1,5 +1,9 @@
 # Typstify
 
+[![Crates.io](https://img.shields.io/crates/v/typstify.svg)](https://crates.io/crates/typstify)
+[![Docs.rs](https://docs.rs/typstify/badge.svg)](https://docs.rs/typstify)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+
 ![typstify](https://socialify.git.ci/longcipher/typstify/image?font=Source+Code+Pro&language=1&name=1&owner=1&pattern=Circuit+Board&theme=Auto)
 
 A high-performance static site generator with **Typst** and **Markdown** support.
@@ -14,6 +18,20 @@ A high-performance static site generator with **Typst** and **Markdown** support
 - 📊 **Syntax Highlighting** - 100+ languages supported
 - 📰 **RSS & Sitemap** - Automatic feed generation
 - 🎨 **Customizable** - Templates, themes, and styles
+
+## Crates
+
+Typstify is a modular project composed of several crates:
+
+| Crate | Description | Documentation |
+|-------|-------------|---------------|
+| `typstify` | Main CLI tool and server | [![Docs](https://img.shields.io/docsrs/typstify)](https://docs.rs/typstify) |
+| `typstify-core` | Core types and config | [![Docs](https://img.shields.io/docsrs/typstify-core)](https://docs.rs/typstify-core) |
+| `typstify-parser` | Content parsers | [![Docs](https://img.shields.io/docsrs/typstify-parser)](https://docs.rs/typstify-parser) |
+| `typstify-generator` | Generation engine | [![Docs](https://img.shields.io/docsrs/typstify-generator)](https://docs.rs/typstify-generator) |
+| `typstify-search` | Search indexing | [![Docs](https://img.shields.io/docsrs/typstify-search)](https://docs.rs/typstify-search) |
+| `typstify-search-wasm` | WASM search runtime | [![Docs](https://img.shields.io/docsrs/typstify-search-wasm)](https://docs.rs/typstify-search-wasm) |
+| `typstify-ui` | UI components | [![Docs](https://img.shields.io/docsrs/typstify-ui)](https://docs.rs/typstify-ui) |
 
 ## Installation
 
