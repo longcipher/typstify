@@ -11,6 +11,9 @@ keywords.workspace = true
 categories.workspace = true
 description = "Leptos UI components for Typstify"
 
+[package.metadata.docs.rs]
+targets = ["wasm32-unknown-unknown"]
+
 [dependencies]
 leptos = { workspace = true, features = ["csr"] }
 serde = { workspace = true, features = ["derive"] }

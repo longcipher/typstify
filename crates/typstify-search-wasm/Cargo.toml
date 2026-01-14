@@ -11,6 +11,9 @@ keywords.workspace = true
 categories.workspace = true
 description = "WASM search runtime for browser"
 
+[package.metadata.docs.rs]
+targets = ["wasm32-unknown-unknown"]
+
 [lib]
 crate-type = ["cdylib", "rlib"]
 
