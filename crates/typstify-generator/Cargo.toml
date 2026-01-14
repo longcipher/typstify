@@ -12,8 +12,8 @@ categories.workspace = true
 description = "Static site generation engine"
 
 [dependencies]
-typstify-core = "0.1.0"
-typstify-parser = "0.1.0"
+typstify-core.workspace = true
+typstify-parser.workspace = true
 
 chrono = { workspace = true, features = ["serde"] }
 rayon.workspace = true

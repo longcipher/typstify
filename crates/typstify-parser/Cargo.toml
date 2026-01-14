@@ -12,7 +12,7 @@ categories.workspace = true
 description = "Content parsers for Markdown and Typst"
 
 [dependencies]
-typstify-core = "0.1.0"
+typstify-core.workspace = true
 
 pulldown-cmark.workspace = true
 syntect.workspace = true

@@ -16,9 +16,9 @@ name = "typstify"
 path = "src/main.rs"
 
 [dependencies]
-typstify-core = "0.1.0"
-typstify-generator = "0.1.0"
-typstify-parser = "0.1.0"
+typstify-core.workspace = true
+typstify-generator.workspace = true
+typstify-parser.workspace = true
 
 axum.workspace = true
 chrono.workspace = true
