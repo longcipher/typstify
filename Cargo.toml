@@ -5,8 +5,13 @@ resolver = "3"
 [workspace.package]
 version = "0.1.0"
 edition = "2024"
+authors = ["longcipher"]
 license = "Apache-2.0"
 repository = "https://github.com/longcipher/typstify"
+homepage = "https://github.com/longcipher/typstify"
+readme = "README.md"
+keywords = ["static-site-generator", "typst", "markdown", "ssg"]
+categories = ["web-programming", "command-line-utilities"]
 
 [workspace.dependencies]
 # CLI & Config

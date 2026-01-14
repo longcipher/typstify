@@ -2,8 +2,13 @@
 name = "typstify-search-wasm"
 version.workspace = true
 edition.workspace = true
+authors.workspace = true
 license.workspace = true
 repository.workspace = true
+homepage.workspace = true
+readme.workspace = true
+keywords.workspace = true
+categories.workspace = true
 description = "WASM search runtime for browser"
 
 [lib]
