@@ -12,7 +12,7 @@ categories.workspace = true
 description = "Search index generation with Tantivy"
 
 [dependencies]
-typstify-core.workspace = true
+typstify-core = "0.1.0"
 
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
