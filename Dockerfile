@@ -9,8 +9,8 @@ COPY . .
 # Build release binary
 RUN cargo build --release --package typstify
 
-# Stage 2: Runtime environment (slim for smaller image)
-FROM debian:bookworm-slim
+# Stage 2: Runtime environment
+FROM gcr.io/distroless/cc-debian12
 
 # Install required runtime dependencies
 RUN apt-get update && \
