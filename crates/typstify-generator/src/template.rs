@@ -145,6 +145,7 @@ impl TemplateRegistry {
         self.register(Template::new("base", DEFAULT_BASE_TEMPLATE));
         self.register(Template::new("page", DEFAULT_PAGE_TEMPLATE));
         self.register(Template::new("post", DEFAULT_POST_TEMPLATE));
+        self.register(Template::new("short", DEFAULT_SHORT_TEMPLATE));
         self.register(Template::new("list", DEFAULT_LIST_TEMPLATE));
         self.register(Template::new("taxonomy", DEFAULT_TAXONOMY_TEMPLATE));
         self.register(Template::new("redirect", DEFAULT_REDIRECT_TEMPLATE));
@@ -155,6 +156,7 @@ impl TemplateRegistry {
         ));
         self.register(Template::new("archives", DEFAULT_ARCHIVES_TEMPLATE));
         self.register(Template::new("section", DEFAULT_SECTION_TEMPLATE));
+        self.register(Template::new("shorts", DEFAULT_SHORTS_SECTION_TEMPLATE));
     }
 
     /// Register a template.
@@ -209,7 +211,7 @@ pub const DEFAULT_BASE_TEMPLATE: &str = r##"<!DOCTYPE html>
             <nav>
                 <a href="{{ nav_home_url }}" class="site-title">{{ site_title }}</a>
                 <div class="nav-links">
-                    <a href="{{ nav_posts_url }}">Posts</a>
+                    {{ section_nav? }}
                     <a href="{{ nav_archives_url }}">Archives</a>
                     <a href="{{ nav_tags_url }}">Tags</a>
                     <a href="{{ nav_about_url }}">About</a>
@@ -336,6 +338,24 @@ pub const DEFAULT_SECTION_TEMPLATE: &str = r#"<section class="section-list post-
     <div class="pagination">{{ pagination? }}</div>
 </section>"#;
 
+/// Default short template (minimalist layout).
+pub const DEFAULT_SHORT_TEMPLATE: &str = r#"<div class="short-item">
+    <time class="short-date" datetime="{{ date_iso }}">{{ date_formatted }}</time>
+    <div class="short-content">
+        {{ content }}
+    </div>
+</div>"#;
+
+/// Default shorts section template (minimalist layout).
+pub const DEFAULT_SHORTS_SECTION_TEMPLATE: &str = r#"<section class="shorts-section">
+    <h1>{{ title }}</h1>
+    <p class="section-description">{{ description? }}</p>
+    <div class="short-list">
+        {{ items }}
+    </div>
+    <div class="pagination">{{ pagination? }}</div>
+</section>"#;
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -410,7 +430,7 @@ mod tests {
             .with_var("year", "2026")
             // Navigation URLs
             .with_var("nav_home_url", "/")
-            .with_var("nav_posts_url", "/posts")
+            .with_var("section_nav", r#"<a href="/posts">Posts</a>"#)
             .with_var("nav_archives_url", "/archives")
             .with_var("nav_tags_url", "/tags")
             .with_var("nav_about_url", "/about");

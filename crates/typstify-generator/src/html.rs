@@ -35,6 +35,8 @@ pub type Result<T> = std::result::Result<T, HtmlError>;
 pub struct HtmlGenerator {
     templates: TemplateRegistry,
     config: Config,
+    /// Content sections for dynamic navigation (e.g., "posts", "shorts").
+    sections: Vec<String>,
 }
 
 impl HtmlGenerator {
@@ -44,13 +46,66 @@ impl HtmlGenerator {
         Self {
             templates: TemplateRegistry::new(),
             config,
+            sections: Vec::new(),
         }
     }
 
     /// Create a generator with custom templates.
     #[must_use]
     pub fn with_templates(config: Config, templates: TemplateRegistry) -> Self {
-        Self { templates, config }
+        Self {
+            templates,
+            config,
+            sections: Vec::new(),
+        }
+    }
+
+    /// Set content sections for dynamic navigation.
+    #[must_use]
+    pub fn with_sections(mut self, sections: Vec<String>) -> Self {
+        self.sections = sections;
+        self
+    }
+
+    /// Generate navigation HTML for content sections.
+    fn generate_section_nav(&self, lang_prefix: &str) -> String {
+        if self.sections.is_empty() {
+            // Default to "Posts" if no sections configured
+            return format!(r#"<a href="{lang_prefix}/posts">Posts</a>"#);
+        }
+
+        // Filter out language codes (2-3 letter codes) and standalone pages like "about"
+        let excluded_sections = ["about", "index"];
+        let filtered_sections: Vec<_> = self
+            .sections
+            .iter()
+            .filter(|s| {
+                // Exclude 2-3 letter sections (likely language codes like "zh", "en")
+                if s.len() <= 3 && s.chars().all(|c| c.is_ascii_lowercase()) {
+                    return false;
+                }
+                // Exclude known standalone pages
+                !excluded_sections.contains(&s.as_str())
+            })
+            .collect();
+
+        if filtered_sections.is_empty() {
+            return format!(r#"<a href="{lang_prefix}/posts">Posts</a>"#);
+        }
+
+        filtered_sections
+            .iter()
+            .map(|section| {
+                // Capitalize first letter for display
+                let title = section
+                    .chars()
+                    .next()
+                    .map(|c| c.to_uppercase().collect::<String>() + &section[1..])
+                    .unwrap_or_else(|| (*section).clone());
+                format!(r#"<a href="{lang_prefix}/{section}">{title}</a>"#)
+            })
+            .collect::<Vec<_>>()
+            .join("\n                    ")
     }
 
     /// Register a custom template.
@@ -63,10 +118,15 @@ impl HtmlGenerator {
         debug!(url = %page.url, "generating HTML for page");
 
         // Determine which template to use
-        let template_name =
-            page.template
-                .as_deref()
-                .unwrap_or(if page.date.is_some() { "post" } else { "page" });
+        let template_name = page.template.as_deref().map_or_else(
+            || {
+                if page.date.is_some() { "post" } else { "page" }
+            },
+            |t| {
+                // Normalize "shorts" to "short" for individual pages
+                if t == "shorts" { "short" } else { t }
+            },
+        );
 
         // Build inner content context
         let inner_ctx = self.build_page_context(page)?;
@@ -116,10 +176,10 @@ impl HtmlGenerator {
             .with_var("year", Utc::now().year().to_string())
             // Navigation URLs
             .with_var("nav_home_url", "/")
-            .with_var("nav_posts_url", "/posts")
             .with_var("nav_archives_url", "/archives")
             .with_var("nav_tags_url", "/tags")
-            .with_var("nav_about_url", "/about");
+            .with_var("nav_about_url", "/about")
+            .with_var("section_nav", self.generate_section_nav(""));
 
         Ok(self.templates.render("base", &base_ctx)?)
     }
@@ -166,10 +226,10 @@ impl HtmlGenerator {
             .with_var("year", Utc::now().year().to_string())
             // Navigation URLs
             .with_var("nav_home_url", "/")
-            .with_var("nav_posts_url", "/posts")
             .with_var("nav_archives_url", "/archives")
             .with_var("nav_tags_url", "/tags")
-            .with_var("nav_about_url", "/about");
+            .with_var("nav_about_url", "/about")
+            .with_var("section_nav", self.generate_section_nav(""));
 
         Ok(self.templates.render("base", &base_ctx)?)
     }
@@ -185,6 +245,17 @@ impl HtmlGenerator {
             ctx.insert("date_iso", date.format("%Y-%m-%d").to_string());
             ctx.insert("date_formatted", date.format("%B %d, %Y").to_string());
         }
+
+        // Add author info for short templates
+        let author = self.config.site.author.as_deref().unwrap_or("Author");
+        ctx.insert("author", author);
+        let initials: String = author
+            .split_whitespace()
+            .filter_map(|w| w.chars().next())
+            .take(2)
+            .collect::<String>()
+            .to_uppercase();
+        ctx.insert("author_initials", initials);
 
         // Add tags HTML if present
         if !page.tags.is_empty() {
@@ -239,10 +310,11 @@ impl HtmlGenerator {
             .with_var("year", Utc::now().year().to_string())
             // Navigation URLs with language prefix
             .with_var("nav_home_url", format!("{lang_prefix}/"))
-            .with_var("nav_posts_url", format!("{lang_prefix}/posts"))
             .with_var("nav_archives_url", format!("{lang_prefix}/archives"))
             .with_var("nav_tags_url", format!("{lang_prefix}/tags"))
-            .with_var("nav_about_url", format!("{lang_prefix}/about"));
+            .with_var("nav_about_url", format!("{lang_prefix}/about"))
+            // Dynamic section navigation
+            .with_var("section_nav", self.generate_section_nav(&lang_prefix));
 
         // Add description if present
         if let Some(desc) = &page.description {
@@ -413,10 +485,10 @@ impl HtmlGenerator {
             .with_var("year", Utc::now().year().to_string())
             // Navigation URLs
             .with_var("nav_home_url", format!("{lang_prefix}/"))
-            .with_var("nav_posts_url", format!("{lang_prefix}/posts"))
             .with_var("nav_archives_url", format!("{lang_prefix}/archives"))
             .with_var("nav_tags_url", format!("{lang_prefix}/tags"))
-            .with_var("nav_about_url", format!("{lang_prefix}/about"));
+            .with_var("nav_about_url", format!("{lang_prefix}/about"))
+            .with_var("section_nav", self.generate_section_nav(&lang_prefix));
 
         // Generate language switcher
         let lang_switcher = self.generate_lang_switcher(lang, "tags");
@@ -476,10 +548,10 @@ impl HtmlGenerator {
             .with_var("year", Utc::now().year().to_string())
             // Navigation URLs
             .with_var("nav_home_url", format!("{lang_prefix}/"))
-            .with_var("nav_posts_url", format!("{lang_prefix}/posts"))
             .with_var("nav_archives_url", format!("{lang_prefix}/archives"))
             .with_var("nav_tags_url", format!("{lang_prefix}/tags"))
-            .with_var("nav_about_url", format!("{lang_prefix}/about"));
+            .with_var("nav_about_url", format!("{lang_prefix}/about"))
+            .with_var("section_nav", self.generate_section_nav(&lang_prefix));
 
         // Generate language switcher
         let lang_switcher = self.generate_lang_switcher(lang, "categories");
@@ -526,9 +598,19 @@ impl HtmlGenerator {
                             .date
                             .map(|d| d.format("%m-%d").to_string())
                             .unwrap_or_default();
+                        // Determine template type for badge
+                        let template_type = p.template.as_deref().unwrap_or("post");
+                        let badge_class = match template_type {
+                            "short" | "shorts" => "badge-short",
+                            _ => "badge-post",
+                        };
+                        let badge_label = match template_type {
+                            "short" | "shorts" => "short",
+                            _ => "post",
+                        };
                         format!(
-                            r#"<li><span class="archive-date">{}</span><a href="{}">{}</a></li>"#,
-                            date_str, p.url, p.title
+                            r#"<li><span class="archive-date">{}</span><span class="archive-badge {}">{}</span><a href="{}">{}</a></li>"#,
+                            date_str, badge_class, badge_label, p.url, p.title
                         )
                     })
                     .collect::<Vec<_>>()
@@ -558,10 +640,10 @@ impl HtmlGenerator {
             .with_var("year", Utc::now().year().to_string())
             // Navigation URLs
             .with_var("nav_home_url", format!("{lang_prefix}/"))
-            .with_var("nav_posts_url", format!("{lang_prefix}/posts"))
             .with_var("nav_archives_url", format!("{lang_prefix}/archives"))
             .with_var("nav_tags_url", format!("{lang_prefix}/tags"))
-            .with_var("nav_about_url", format!("{lang_prefix}/about"));
+            .with_var("nav_about_url", format!("{lang_prefix}/about"))
+            .with_var("section_nav", self.generate_section_nav(&lang_prefix));
 
         // Generate language switcher
         let lang_switcher = self.generate_lang_switcher(lang, "archives");
@@ -625,10 +707,78 @@ impl HtmlGenerator {
             .with_var("year", Utc::now().year().to_string())
             // Navigation URLs
             .with_var("nav_home_url", format!("{lang_prefix}/"))
-            .with_var("nav_posts_url", format!("{lang_prefix}/posts"))
             .with_var("nav_archives_url", format!("{lang_prefix}/archives"))
             .with_var("nav_tags_url", format!("{lang_prefix}/tags"))
-            .with_var("nav_about_url", format!("{lang_prefix}/about"));
+            .with_var("nav_about_url", format!("{lang_prefix}/about"))
+            .with_var("section_nav", self.generate_section_nav(&lang_prefix));
+
+        // Generate language switcher
+        let lang_switcher = self.generate_lang_switcher(lang, section);
+        if !lang_switcher.is_empty() {
+            base_ctx.insert("lang_switcher", lang_switcher);
+        }
+
+        Ok(self.templates.render("base", &base_ctx)?)
+    }
+
+    /// Generate a shorts section index page (uses shorts-specific template).
+    pub fn generate_shorts_page(
+        &self,
+        section: &str,
+        description: Option<&str>,
+        items_html: &str,
+        pagination_html: Option<&str>,
+        lang: &str,
+    ) -> Result<String> {
+        let is_default_lang = lang == self.config.site.default_language;
+        let lang_prefix = if is_default_lang {
+            String::new()
+        } else {
+            format!("/{lang}")
+        };
+
+        // Convert section name to title case
+        let title = section
+            .chars()
+            .next()
+            .map(|c| c.to_uppercase().collect::<String>() + &section[1..])
+            .unwrap_or_else(|| section.to_string());
+
+        let mut ctx = TemplateContext::new()
+            .with_var("title", &title)
+            .with_var("items", items_html);
+
+        if let Some(desc) = description {
+            ctx.insert("description", desc);
+        }
+
+        if let Some(pagination) = pagination_html {
+            ctx.insert("pagination", pagination);
+        }
+
+        // Use shorts template
+        let inner_html = self.templates.render("shorts", &ctx)?;
+
+        let mut base_ctx = TemplateContext::new()
+            .with_var("lang", lang)
+            .with_var("title", &title)
+            .with_var(
+                "site_title_suffix",
+                format!(" | {}", self.config.title_for_language(lang)),
+            )
+            .with_var(
+                "canonical_url",
+                format!("{}{}/{}", self.config.site.base_url, lang_prefix, section),
+            )
+            .with_var("content", &inner_html)
+            .with_var("site_title", self.config.title_for_language(lang))
+            .with_var("year", Utc::now().year().to_string())
+            // Navigation URLs
+            .with_var("nav_home_url", format!("{lang_prefix}/"))
+            .with_var("nav_archives_url", format!("{lang_prefix}/archives"))
+            .with_var("nav_tags_url", format!("{lang_prefix}/tags"))
+            .with_var("nav_about_url", format!("{lang_prefix}/about"))
+            .with_var("section_nav", self.generate_section_nav(&lang_prefix));
 
         // Generate language switcher
         let lang_switcher = self.generate_lang_switcher(lang, section);
@@ -682,6 +832,57 @@ pub fn list_item_html(page: &Page) -> String {
 </li>"#,
         page.url, page.title, date_html, description_html
     )
+}
+
+/// Generate HTML for a short item (minimalist layout).
+pub fn short_item_html(page: &Page, _author: &str) -> String {
+    let date_html = page
+        .date
+        .map(|d| {
+            format!(
+                r#"<time class="short-date" datetime="{}">{}</time>"#,
+                d.format("%Y-%m-%d"),
+                d.format("%b %d, %Y")
+            )
+        })
+        .unwrap_or_default();
+
+    // Use actual content for shorts display
+    let content_html = &page.content;
+
+    format!(
+        r#"<div class="short-item">
+    {date_html}
+    <div class="short-content">
+        {content_html}
+    </div>
+</div>"#
+    )
+}
+
+/// Generate HTML for shorts with date separators.
+pub fn shorts_with_separators_html(pages: &[&Page], author: &str) -> String {
+    let mut result = String::new();
+    let mut last_date: Option<chrono::NaiveDate> = None;
+
+    for page in pages {
+        if let Some(date) = page.date {
+            let current_date = date.date_naive();
+
+            // Add separator if date changes
+            if let Some(prev_date) = last_date
+                && current_date != prev_date
+            {
+                result.push_str(r#"<hr class="date-separator">"#);
+            }
+
+            last_date = Some(current_date);
+        }
+
+        result.push_str(&short_item_html(page, author));
+    }
+
+    result
 }
 
 /// Generate pagination HTML.

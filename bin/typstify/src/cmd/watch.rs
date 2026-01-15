@@ -46,7 +46,15 @@ pub async fn run(config_path: &Path, port: u16, open_browser: bool) -> Result<()
 
     // Initial build
     tracing::info!("Running initial build...");
-    let builder = Builder::new(config.clone(), &content_dir_path, &output_dir);
+    let mut builder = Builder::new(config.clone(), &content_dir_path, &output_dir);
+
+    // Auto-detect static directory alongside content directory
+    let static_dir_path = Path::new("static").to_path_buf();
+    if static_dir_path.exists() && static_dir_path.is_dir() {
+        tracing::info!("Found static directory, will copy to output");
+        builder = builder.with_static_dir(&static_dir_path);
+    }
+
     let stats = inject_livereload_and_build(&builder, &output_dir)?;
     print_build_stats(&stats);
 
@@ -98,12 +106,19 @@ pub async fn run(config_path: &Path, port: u16, open_browser: bool) -> Result<()
             .wrap_err("Failed to watch style directory")?;
         tracing::debug!("Watching style directory");
     }
+    if static_dir_path.exists() {
+        watcher
+            .watch(&static_dir_path, RecursiveMode::Recursive)
+            .wrap_err("Failed to watch static directory")?;
+        tracing::debug!("Watching static directory");
+    }
 
     // Start rebuild task
     let rebuild_state = state.clone();
     let rebuild_config = config.clone();
     let rebuild_output = output_dir.clone();
     let rebuild_content = content_dir_path.clone();
+    let rebuild_static = static_dir_path.clone();
 
     tokio::spawn(async move {
         let mut last_rebuild = Instant::now();
@@ -119,7 +134,13 @@ pub async fn run(config_path: &Path, port: u16, open_browser: bool) -> Result<()
 
             println!();
             println!("  File change detected, rebuilding...");
-            let builder = Builder::new(rebuild_config.clone(), &rebuild_content, &rebuild_output);
+            let mut builder =
+                Builder::new(rebuild_config.clone(), &rebuild_content, &rebuild_output);
+
+            // Include static directory if it exists
+            if rebuild_static.exists() && rebuild_static.is_dir() {
+                builder = builder.with_static_dir(&rebuild_static);
+            }
 
             match inject_livereload_and_build(&builder, &rebuild_output) {
                 Ok(stats) => {

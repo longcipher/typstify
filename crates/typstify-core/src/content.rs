@@ -310,15 +310,26 @@ fn strip_html(html: &str) -> String {
     result
 }
 
-/// Truncate text at word boundary.
-fn truncate_at_word_boundary(text: &str, max_len: usize) -> String {
-    if text.len() <= max_len {
+/// Truncate text at word boundary, respecting UTF-8 character boundaries.
+fn truncate_at_word_boundary(text: &str, max_chars: usize) -> String {
+    // Count characters instead of bytes to properly handle multi-byte UTF-8
+    let char_count = text.chars().count();
+    if char_count <= max_chars {
         return text.to_string();
     }
 
-    let truncated = &text[..max_len];
-    if let Some(last_space) = truncated.rfind(' ') {
-        format!("{}...", &truncated[..last_space])
+    // Find the byte index corresponding to max_chars characters
+    let truncate_byte_idx = text
+        .char_indices()
+        .nth(max_chars)
+        .map(|(idx, _)| idx)
+        .unwrap_or(text.len());
+
+    let truncated = &text[..truncate_byte_idx];
+
+    // Try to find a space to break at for cleaner truncation
+    if let Some(last_space_byte) = truncated.rfind(' ') {
+        format!("{}...", &truncated[..last_space_byte])
     } else {
         format!("{truncated}...")
     }
@@ -426,10 +437,19 @@ mod tests {
     fn test_truncate_at_word_boundary() {
         let text = "Hello world this is a test";
         assert_eq!(truncate_at_word_boundary(text, 100), text);
-        // max_len=11 gives "Hello world", last space at pos 5, so "Hello..."
+        // max_chars=11 includes "Hello world", last space at pos 5, so "Hello..."
         assert_eq!(truncate_at_word_boundary(text, 11), "Hello...");
         assert_eq!(truncate_at_word_boundary(text, 5), "Hello...");
-        // max_len=12 gives "Hello world ", last space at pos 11, so "Hello world..."
+        // max_chars=12 includes "Hello world ", last space at pos 11, so "Hello world..."
         assert_eq!(truncate_at_word_boundary(text, 12), "Hello world...");
+
+        // Test with multi-byte UTF-8 characters (emojis)
+        let emoji_text = "Hello 🌟 World 📝 Test";
+        // Should not panic and should handle emojis correctly
+        assert_eq!(truncate_at_word_boundary(emoji_text, 10), "Hello 🌟...");
+
+        // Test Chinese characters
+        let chinese_text = "你好世界 Hello World";
+        assert_eq!(truncate_at_word_boundary(chinese_text, 7), "你好世界...");
     }
 }

@@ -39,7 +39,15 @@ pub fn run(config_path: &Path, output: &Path, drafts: bool) -> Result<()> {
 
     // Create builder with content and output directories
     let content_dir = Path::new("content");
-    let builder = Builder::new(config, content_dir, output);
+    let mut builder = Builder::new(config, content_dir, output);
+
+    // Auto-detect static directory alongside content directory
+    let static_dir = Path::new("static");
+    if static_dir.exists() && static_dir.is_dir() {
+        tracing::info!("Found static directory, will copy to output");
+        builder = builder.with_static_dir(static_dir);
+    }
+
     let stats = builder.build().wrap_err("Build failed")?;
 
     let duration = start.elapsed();

@@ -17,7 +17,9 @@ use typstify_search::SimpleSearchIndex;
 use crate::{
     assets::{AssetError, AssetManifest, AssetProcessor},
     collector::{CollectorError, ContentCollector, SiteContent, paginate},
-    html::{HtmlError, HtmlGenerator, list_item_html, pagination_html},
+    html::{
+        HtmlError, HtmlGenerator, list_item_html, pagination_html, shorts_with_separators_html,
+    },
     robots::{RobotsError, RobotsGenerator},
     rss::{RssError, RssGenerator},
     sitemap::{SitemapError, SitemapGenerator},
@@ -134,14 +136,17 @@ impl Builder {
         let collector = ContentCollector::new(self.config.clone(), &self.content_dir);
         let content = collector.collect()?;
 
-        // 3. Generate HTML pages
-        stats.pages = self.generate_pages(&content)?;
+        // 3. Extract sections for dynamic navigation
+        let sections: Vec<String> = content.sections.keys().cloned().collect();
 
-        // 4. Generate taxonomy pages
-        stats.taxonomy_pages = self.generate_taxonomy_pages(&content)?;
+        // 4. Generate HTML pages
+        stats.pages = self.generate_pages(&content, &sections)?;
 
-        // 5. Generate auto-generated index pages (archives, tags index, section indices)
-        stats.auto_pages = self.generate_auto_pages(&content)?;
+        // 5. Generate taxonomy pages
+        stats.taxonomy_pages = self.generate_taxonomy_pages(&content, &sections)?;
+
+        // 6. Generate auto-generated index pages (archives, tags index, section indices)
+        stats.auto_pages = self.generate_auto_pages(&content, &sections)?;
 
         // 6. Generate redirects
         stats.redirects = self.generate_redirects(&content)?;
@@ -198,8 +203,8 @@ impl Builder {
     }
 
     /// Generate HTML pages for all content.
-    fn generate_pages(&self, content: &SiteContent) -> Result<usize> {
-        let generator = HtmlGenerator::new(self.config.clone());
+    fn generate_pages(&self, content: &SiteContent, sections: &[String]) -> Result<usize> {
+        let generator = HtmlGenerator::new(self.config.clone()).with_sections(sections.to_vec());
         let pages: Vec<_> = content.pages.values().collect();
 
         info!(count = pages.len(), "generating HTML pages");
@@ -245,8 +250,8 @@ impl Builder {
     }
 
     /// Generate taxonomy (tag/category) pages.
-    fn generate_taxonomy_pages(&self, content: &SiteContent) -> Result<usize> {
-        let generator = HtmlGenerator::new(self.config.clone());
+    fn generate_taxonomy_pages(&self, content: &SiteContent, sections: &[String]) -> Result<usize> {
+        let generator = HtmlGenerator::new(self.config.clone()).with_sections(sections.to_vec());
         let per_page = self.config.taxonomies.tags.paginate;
         let mut count = 0;
 
@@ -331,8 +336,8 @@ impl Builder {
 
     /// Generate auto-generated index pages: archives, tags index, categories index, section indices.
     /// Generates per-language versions when multiple languages are configured.
-    fn generate_auto_pages(&self, content: &SiteContent) -> Result<usize> {
-        let generator = HtmlGenerator::new(self.config.clone());
+    fn generate_auto_pages(&self, content: &SiteContent, sections: &[String]) -> Result<usize> {
+        let generator = HtmlGenerator::new(self.config.clone()).with_sections(sections.to_vec());
         let mut count = 0;
 
         // Get all languages
@@ -463,10 +468,20 @@ impl Builder {
                 let per_page = self.config.taxonomies.tags.paginate;
                 let total_pages = section_pages.len().div_ceil(per_page).max(1);
 
+                // Use shorts-specific template for shorts section
+                let is_shorts = section == "shorts";
+                let author = self.config.site.author.as_deref().unwrap_or("Author");
+
                 for page_num in 1..=total_pages {
                     let (page_items, _) = paginate(&section_pages, page_num, per_page);
 
-                    let items_html: String = page_items.iter().map(|p| list_item_html(p)).collect();
+                    // Use appropriate item html based on section type
+                    let items_html: String = if is_shorts {
+                        shorts_with_separators_html(page_items, author)
+                    } else {
+                        page_items.iter().map(|p| list_item_html(p)).collect()
+                    };
+
                     let base_url = if is_default {
                         format!("/{section}")
                     } else {
@@ -474,13 +489,24 @@ impl Builder {
                     };
                     let pagination = pagination_html(page_num, total_pages, &base_url);
 
-                    let html = generator.generate_section_page(
-                        &section,
-                        None, // description
-                        &items_html,
-                        pagination.as_deref(),
-                        lang,
-                    )?;
+                    // Use shorts template for shorts section
+                    let html = if is_shorts {
+                        generator.generate_shorts_page(
+                            &section,
+                            None, // description
+                            &items_html,
+                            pagination.as_deref(),
+                            lang,
+                        )?
+                    } else {
+                        generator.generate_section_page(
+                            &section,
+                            None, // description
+                            &items_html,
+                            pagination.as_deref(),
+                            lang,
+                        )?
+                    };
 
                     let output_path = if page_num == 1 {
                         if is_default {

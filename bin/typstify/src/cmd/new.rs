@@ -17,6 +17,7 @@ pub fn run(path: &Path, template: &str) -> Result<()> {
     // Determine extension based on template
     let (ext, frontmatter) = match template {
         "typst" => ("typ", generate_typst_frontmatter(path)),
+        "short" | "shorts" => ("md", generate_short_frontmatter(path)),
         _ => ("md", generate_markdown_frontmatter(path)),
     };
 
@@ -80,6 +81,29 @@ fn generate_typst_frontmatter(path: &Path) -> String {
 = {title}
 
 Write your content here.
+"#
+    )
+}
+
+fn generate_short_frontmatter(path: &Path) -> String {
+    let title = path
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or("Untitled")
+        .replace('-', " ");
+
+    let date = Utc::now().format("%Y-%m-%dT%H:%M:%SZ").to_string();
+
+    format!(
+        r#"---
+title: "{title}"
+date: {date}
+template: "short"
+draft: true
+tags: []
+---
+
+Write your short content here.
 "#
     )
 }

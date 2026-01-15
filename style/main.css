@@ -76,3 +76,87 @@
 .prose blockquote {
   @apply border-l-4 border-gray-300 pl-4 italic text-gray-600 mb-4;
 }
+
+/* Twitter/X style tweet cards */
+.tweet-timeline {
+  @apply max-w-2xl mx-auto;
+}
+
+.tweet-list {
+  @apply divide-y divide-gray-200 dark:divide-gray-700;
+}
+
+.tweet-card {
+  @apply flex gap-3 py-4 px-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer;
+}
+
+.tweet-single {
+  @apply hover:bg-transparent cursor-default py-6;
+}
+
+.tweet-avatar {
+  @apply shrink-0;
+}
+
+.avatar-initials {
+  @apply flex items-center justify-center w-10 h-10 rounded-full bg-primary text-white text-sm font-semibold;
+}
+
+.tweet-main {
+  @apply flex-1 min-w-0;
+}
+
+.tweet-header {
+  @apply flex items-center gap-1 text-sm mb-1;
+}
+
+.tweet-author {
+  @apply font-semibold text-gray-900 dark:text-gray-100 hover:underline;
+}
+
+.tweet-time {
+  @apply text-gray-500 dark:text-gray-400 text-sm;
+}
+
+.tweet-content {
+  @apply text-gray-900 dark:text-gray-100 leading-relaxed;
+}
+
+.tweet-content p {
+  @apply mb-2 last:mb-0;
+}
+
+/* Date separator for shorts */
+.date-separator {
+  @apply my-6 border-t border-gray-300 dark:border-gray-600;
+}
+
+/* Archives badges - styled as prominent badges */
+.archive-badge {
+  @apply inline-flex items-center px-2 py-0.5 mr-2 rounded text-xs font-bold uppercase;
+}
+
+.badge-post {
+  @apply bg-green-600 text-white dark:bg-green-500;
+}
+
+.badge-short {
+  @apply bg-blue-600 text-white dark:bg-blue-500;
+}
+
+/* Archive list styling */
+.archive-year ul {
+  @apply space-y-2 mt-3 mb-6;
+}
+
+.archive-year li {
+  @apply flex items-center gap-2;
+}
+
+.archive-date {
+  @apply text-sm text-gray-500 dark:text-gray-400 font-mono w-12 flex-shrink-0;
+}
+
+.archive-year li a {
+  @apply flex-1 hover:text-primary dark:hover:text-primary transition-colors;
+}
