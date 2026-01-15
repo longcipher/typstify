@@ -10,7 +10,7 @@ COPY . .
 RUN cargo build --release --package typstify
 
 # Stage 2: Runtime environment
-FROM gcr.io/distroless/cc-debian12
+FROM debian:latest
 
 # Install required runtime dependencies
 RUN apt-get update && \
