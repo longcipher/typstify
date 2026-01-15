@@ -27,6 +27,10 @@ jobs:
           output: public
           working-directory: examples/blog
 
+      - name: Fix permissions
+        if: always()
+        run: sudo chown -R $USER:$USER examples/blog
+
       - name: Deploy to Cloudflare Workers
         uses: cloudflare/wrangler-action@v3
         with:
