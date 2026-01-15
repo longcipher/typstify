@@ -37,9 +37,3 @@ runs:
   image: 'Dockerfile'
   env:
     TYPSTIFY_WORKING_DIR: ${{ inputs.working-directory }}
-  args:
-    - ${{ inputs.command }}
-    - '--config'
-    - ${{ inputs.config }}
-    - '--output'
-    - ${{ inputs.output }}
