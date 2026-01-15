@@ -40,3 +40,11 @@ check-cn:
   rg --line-number --column "\p{Han}"
 # Full CI check
 ci: lint test
+
+# Publish all crates in dependency order
+publish:
+  for crate in typstify-core typstify-parser typstify-search typstify-search-wasm typstify-ui typstify-generator typstify; do \
+    echo "Publishing $crate"; \
+    cargo publish -p $crate; \
+    sleep 10; \
+  done
