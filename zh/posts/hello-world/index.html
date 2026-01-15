@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="zh" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>你好，世界！ | 我的 Typstify 博客</title>
+    <meta name="description" content="欢迎来到我的 Typstify 博客。这是我的第一篇文章。">
+    <meta name="author" content="Typstify Team">
+    <link rel="canonical" href="https://example.com/zh/posts/hello-world">
+    <link rel="alternate" hreflang="zh" href="https://example.com/zh/posts/hello-world" />
+<link rel="alternate" hreflang="en" href="https://example.com/posts/hello-world" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/style.css">
+    
+    <script>
+        // Inline critical JS to prevent FOUC (Flash of Unstyled Content)
+        (function() {
+            const saved = localStorage.getItem('theme');
+            const theme = saved || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <nav>
+                <a href="/zh/" class="site-title">我的 Typstify 博客</a>
+                <div class="nav-links">
+                    <a href="/zh/posts">Posts</a>
+                    <a href="/zh/docs">Docs</a>
+                    <a href="/zh/archives">Archives</a>
+                    <a href="/zh/tags">Tags</a>
+                    <a href="/zh/about">About</a>
+                    <div class="nav-actions">
+                        <div class="search-wrapper" id="searchWrapper">
+                            <input type="text" class="search-input" id="searchInput" placeholder="Search..." autocomplete="off">
+                            <button class="search-btn" id="searchBtn" aria-label="Search" type="button">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                                </svg>
+                            </button>
+                            <div class="search-results" id="searchResults"></div>
+                        </div>
+                        <div class="lang-switcher" tabindex="0" role="button" aria-label="Switch language" aria-haspopup="true">
+    <span class="lang-code">ZH</span>
+    <div class="lang-dropdown"><a href="/posts/hello-world" class="lang-option">English</a>
+        <a href="/zh/posts/hello-world" class="lang-option active">中文</a></div>
+</div>
+                        <button class="theme-toggle" aria-label="Toggle theme" type="button">
+                            <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                            </svg>
+                            <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </nav>
+        </div>
+    </header>
+    <main>
+        <div class="container">
+            <article class="post">
+    <header>
+        <h1>你好，世界！</h1>
+        <time datetime="2024-01-15">January 15, 2024</time>
+        <div class="tags"><a href="/tags/介绍" rel="tag">介绍</a> <a href="/tags/欢迎" rel="tag">欢迎</a></div>
+    </header>
+    <div class="content">
+        <p>欢迎来到我使用 <strong>Typstify</strong> 构建的新博客 - 一个支持 Markdown 和 Typst 的高性能静态网站生成器。</p>
+<h2>为什么选择 Typstify？</h2><p>Typstify 具有以下优势：</p>
+<ol start="1"><li><strong>极速构建</strong> - 使用 Rust 构建，性能卓越</li>
+<li><strong>双格式支持</strong> - 支持 Markdown 或 Typst 编写</li>
+<li><strong>内置搜索</strong> - 基于 WASM 的全文搜索</li>
+<li><strong>实时预览</strong> - 开发时即时反馈</li>
+</ol>
+<h2>代码示例</h2><p>这是一个简单的 Rust 示例：</p>
+<pre style="background-color:#2b303b;">
+<span style="color:#b48ead;">fn </span><span style="color:#8fa1b3;">main</span><span style="color:#c0c5ce;">() {
+</span><span style="color:#c0c5ce;">    println!(&quot;</span><span style="color:#a3be8c;">来自 Typstify 的问候！</span><span style="color:#c0c5ce;">&quot;);
+</span><span style="color:#c0c5ce;">}
+</span></pre>
+<h2>下一步</h2><p>查看<a href="/docs"> 文档</a>了解更多 Typstify 的功能。</p>
+<p>祝写作愉快！🚀</p>
+
+    </div>
+</article>
+        </div>
+    </main>
+    <footer>
+        <div class="container">
+            <p>&copy; 2026 我的 Typstify 博客. Built with <a href="https://github.com/longcipher/typstify">Typstify</a>.</p>
+        </div>
+    </footer>
+    <script src="/assets/main.js" defer></script>
+    
+</body>
+</html>

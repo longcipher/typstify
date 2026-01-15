@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Typstify Features | My Typstify Blog</title>
+    <meta name="description" content="Explore advanced features like custom templates, taxonomies, and multi-language support.">
+    <meta name="author" content="Typstify Team">
+    <link rel="canonical" href="https://example.com/posts/advanced-features">
+    <link rel="alternate" hreflang="en" href="https://example.com/posts/advanced-features" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/style.css">
+    <link rel="stylesheet" href="custom.css">
+    <script>
+        // Inline critical JS to prevent FOUC (Flash of Unstyled Content)
+        (function() {
+            const saved = localStorage.getItem('theme');
+            const theme = saved || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <nav>
+                <a href="/" class="site-title">My Typstify Blog</a>
+                <div class="nav-links">
+                    <a href="/posts">Posts</a>
+                    <a href="/docs">Docs</a>
+                    <a href="/archives">Archives</a>
+                    <a href="/tags">Tags</a>
+                    <a href="/about">About</a>
+                    <div class="nav-actions">
+                        <div class="search-wrapper" id="searchWrapper">
+                            <input type="text" class="search-input" id="searchInput" placeholder="Search..." autocomplete="off">
+                            <button class="search-btn" id="searchBtn" aria-label="Search" type="button">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                                </svg>
+                            </button>
+                            <div class="search-results" id="searchResults"></div>
+                        </div>
+                        <div class="lang-switcher" tabindex="0" role="button" aria-label="Switch language" aria-haspopup="true">
+    <span class="lang-code">EN</span>
+    <div class="lang-dropdown"><a href="/posts/advanced-features" class="lang-option active">English</a>
+        <a href="/zh/posts/advanced-features" class="lang-option">中文</a></div>
+</div>
+                        <button class="theme-toggle" aria-label="Toggle theme" type="button">
+                            <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                            </svg>
+                            <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </nav>
+        </div>
+    </header>
+    <main>
+        <div class="container">
+            <article class="post">
+    <header>
+        <h1>Advanced Typstify Features</h1>
+        <time datetime="2024-01-25">January 25, 2024</time>
+        <div class="tags"><a href="/tags/advanced" rel="tag">advanced</a> <a href="/tags/features" rel="tag">features</a> <a href="/tags/i18n" rel="tag">i18n</a></div>
+    </header>
+    <div class="content">
+        <p>This post covers some of the more advanced features available in Typstify.</p>
+<h2>Taxonomies</h2><p>Typstify automatically generates taxonomy pages for tags and categories:</p>
+<ul><li><code>/tags/</code> - List of all tags</li>
+<li><code>/tags/rust/</code> - All posts tagged with &quot;rust&quot;</li>
+<li><code>/categories/</code> - List of all categories</li>
+</ul>
+<h3>Custom Taxonomies</h3><p>You can define custom taxonomies in your frontmatter:</p>
+<pre style="background-color:#2b303b;">
+<span style="color:#bf616a;">series</span><span style="color:#c0c5ce;">: &quot;</span><span style="color:#a3be8c;">Learning Rust</span><span style="color:#c0c5ce;">&quot;
+</span><span style="color:#bf616a;">difficulty</span><span style="color:#c0c5ce;">: &quot;</span><span style="color:#a3be8c;">intermediate</span><span style="color:#c0c5ce;">&quot;
+</span></pre>
+<h2>URL Aliases</h2><p>Redirect old URLs to new ones:</p>
+<pre style="background-color:#2b303b;">
+<span style="color:#bf616a;">aliases</span><span style="color:#c0c5ce;">: [&quot;</span><span style="color:#a3be8c;">/old-url</span><span style="color:#c0c5ce;">&quot;, &quot;</span><span style="color:#a3be8c;">/another-old-url</span><span style="color:#c0c5ce;">&quot;]
+</span></pre>
+<p>Typstify generates redirect HTML files automatically.</p>
+<h2>Multi-Language Support</h2><h3>Filename-Based i18n</h3><p>Typstify uses filename suffixes for multi-language content:</p>
+<pre style="background-color:#2b303b;">
+<span style="color:#c0c5ce;">content/
+</span><span style="color:#c0c5ce;">├── posts/
+</span><span style="color:#c0c5ce;">│   ├── hello.md        # Default language (en)
+</span><span style="color:#c0c5ce;">│   └── hello.zh.md     # Chinese version
+</span></pre>
+<h3>Language-Specific Config</h3><pre style="background-color:#2b303b;">
+<span style="color:#c0c5ce;">[site]
+</span><span style="color:#c0c5ce;">default_language = &quot;en&quot;
+</span><span style="color:#c0c5ce;">
+</span><span style="color:#c0c5ce;">[languages.en]
+</span><span style="color:#c0c5ce;">name = &quot;English&quot;
+</span><span style="color:#c0c5ce;">
+</span><span style="color:#c0c5ce;">[languages.zh]
+</span><span style="color:#c0c5ce;">name = &quot;中文&quot;
+</span><span style="color:#c0c5ce;">title = &quot;我的博客&quot;
+</span></pre>
+<h2>Custom Assets</h2><h3>Per-Page CSS</h3><pre style="background-color:#2b303b;">
+<span style="color:#bf616a;">custom_css</span><span style="color:#c0c5ce;">: [&quot;</span><span style="color:#a3be8c;">syntax.css</span><span style="color:#c0c5ce;">&quot;, &quot;</span><span style="color:#a3be8c;">diagrams.css</span><span style="color:#c0c5ce;">&quot;]
+</span></pre>
+<h3>Per-Page JavaScript</h3><pre style="background-color:#2b303b;">
+<span style="color:#bf616a;">custom_js</span><span style="color:#c0c5ce;">: [&quot;</span><span style="color:#a3be8c;">interactive.js</span><span style="color:#c0c5ce;">&quot;]
+</span></pre>
+<h2>Table of Contents</h2><p>Typstify automatically extracts headings to generate a table of contents.</p>
+<h3>Nested Headings</h3><h2>Level 2</h2><h3>Level 3</h3><h4>Level 4</h4><p>All these are included in the TOC.</p>
+<h2>Syntax Highlighting</h2><p>Typstify uses Syntect for syntax highlighting with many themes:</p>
+<ul><li><code>base16-ocean.dark</code></li>
+<li><code>InspiredGitHub</code></li>
+<li><code>Solarized (dark)</code></li>
+<li><code>Solarized (light)</code></li>
+</ul>
+<p>Configure in <code>config.toml</code>:</p>
+<pre style="background-color:#2b303b;">
+<span style="color:#c0c5ce;">[build]
+</span><span style="color:#c0c5ce;">syntax_theme = &quot;base16-ocean.dark&quot;
+</span></pre>
+<h2>Search</h2><p>The built-in search uses a WASM runtime for client-side full-text search:</p>
+<ul><li>No server required</li>
+<li>Works offline</li>
+<li>Supports highlighting</li>
+</ul>
+<p>Press <code>Cmd/Ctrl + K</code> to open the search modal.</p>
+
+    </div>
+</article>
+        </div>
+    </main>
+    <footer>
+        <div class="container">
+            <p>&copy; 2026 My Typstify Blog. Built with <a href="https://github.com/longcipher/typstify">Typstify</a>.</p>
+        </div>
+    </footer>
+    <script src="/assets/main.js" defer></script>
+    
+</body>
+</html>

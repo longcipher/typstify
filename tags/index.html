@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tags | My Typstify Blog</title>
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <link rel="canonical" href="https://example.com/tags">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/style.css">
+    
+    <script>
+        // Inline critical JS to prevent FOUC (Flash of Unstyled Content)
+        (function() {
+            const saved = localStorage.getItem('theme');
+            const theme = saved || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <nav>
+                <a href="/" class="site-title">My Typstify Blog</a>
+                <div class="nav-links">
+                    <a href="/posts">Posts</a>
+                    <a href="/docs">Docs</a>
+                    <a href="/archives">Archives</a>
+                    <a href="/tags">Tags</a>
+                    <a href="/about">About</a>
+                    <div class="nav-actions">
+                        <div class="search-wrapper" id="searchWrapper">
+                            <input type="text" class="search-input" id="searchInput" placeholder="Search..." autocomplete="off">
+                            <button class="search-btn" id="searchBtn" aria-label="Search" type="button">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                                </svg>
+                            </button>
+                            <div class="search-results" id="searchResults"></div>
+                        </div>
+                        <div class="lang-switcher" tabindex="0" role="button" aria-label="Switch language" aria-haspopup="true">
+    <span class="lang-code">EN</span>
+    <div class="lang-dropdown"><a href="/tags" class="lang-option active">English</a>
+        <a href="/zh/tags" class="lang-option">中文</a></div>
+</div>
+                        <button class="theme-toggle" aria-label="Toggle theme" type="button">
+                            <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                            </svg>
+                            <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </nav>
+        </div>
+    </header>
+    <main>
+        <div class="container">
+            <section class="taxonomy-index">
+    <h1>Tags</h1>
+    <div class="tags-cloud">
+        <a href="/tags/welcome" class="tag-item"><span class="tag-name">welcome</span><span class="tag-count">1</span></a>
+<a href="/tags/guide" class="tag-item"><span class="tag-name">guide</span><span class="tag-count">1</span></a>
+<a href="/tags/spec" class="tag-item"><span class="tag-name">spec</span><span class="tag-count">1</span></a>
+<a href="/tags/technical" class="tag-item"><span class="tag-name">technical</span><span class="tag-count">1</span></a>
+<a href="/tags/i18n" class="tag-item"><span class="tag-name">i18n</span><span class="tag-count">1</span></a>
+<a href="/tags/intro" class="tag-item"><span class="tag-name">intro</span><span class="tag-count">1</span></a>
+<a href="/tags/typst" class="tag-item"><span class="tag-name">typst</span><span class="tag-count">1</span></a>
+<a href="/tags/advanced" class="tag-item"><span class="tag-name">advanced</span><span class="tag-count">1</span></a>
+<a href="/tags/tutorial" class="tag-item"><span class="tag-name">tutorial</span><span class="tag-count">1</span></a>
+<a href="/tags/features" class="tag-item"><span class="tag-name">features</span><span class="tag-count">1</span></a>
+    </div>
+</section>
+        </div>
+    </main>
+    <footer>
+        <div class="container">
+            <p>&copy; 2026 My Typstify Blog. Built with <a href="https://github.com/longcipher/typstify">Typstify</a>.</p>
+        </div>
+    </footer>
+    <script src="/assets/main.js" defer></script>
+    
+</body>
+</html>
