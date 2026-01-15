@@ -1,0 +1,38 @@
+# Deploy examples/blog to GitHub Pages
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches:
+      - master
+      - main
+  workflow_dispatch:
+
+# Sets permissions for deployment
+permissions:
+  contents: write
+
+# Allow only one concurrent deployment
+concurrency:
+  group: 'pages'
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build with Typstify
+        uses: longcipher/typstify@master
+        with:
+          command: build
+          config: config.toml
+          output: public
+          working-directory: examples/blog
+
+      - name: Deploy to GitHub Pages
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: examples/blog/public

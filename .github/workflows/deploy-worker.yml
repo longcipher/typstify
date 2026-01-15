@@ -1,0 +1,35 @@
+# Deploy examples/blog to Cloudflare Workers
+name: Deploy to Cloudflare Workers
+
+on:
+  push:
+    branches:
+      - master
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  deployments: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build with Typstify
+        uses: longcipher/typstify@master
+        with:
+          command: build
+          config: config.toml
+          output: public
+          working-directory: examples/blog
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy examples/blog/public --project-name=typstify-blog

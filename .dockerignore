@@ -1,0 +1,36 @@
+# Build artifacts
+target/
+
+# Git
+.git/
+.github/
+
+# Node modules
+node_modules/
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Examples output
+examples/*/public/
+
+# Temporary files
+tmp/
+*.tmp
+*.bak
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test artifacts
+*.log
+coverage/

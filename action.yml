@@ -1,0 +1,45 @@
+name: 'Typstify'
+description: 'Build static sites with Typstify - A high-performance static site generator with Typst/Markdown support'
+author: 'longcipher'
+
+branding:
+  icon: 'book-open'
+  color: 'blue'
+
+inputs:
+  command:
+    description: 'Command to run (build, check)'
+    required: false
+    default: 'build'
+  config:
+    description: 'Path to configuration file'
+    required: false
+    default: 'config.toml'
+  output:
+    description: 'Output directory for build command'
+    required: false
+    default: 'public'
+  drafts:
+    description: 'Include draft posts in build'
+    required: false
+    default: 'false'
+  working-directory:
+    description: 'Working directory (relative to repository root)'
+    required: false
+    default: '.'
+
+outputs:
+  output-path:
+    description: 'Path to the generated site output directory'
+
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
+  env:
+    TYPSTIFY_WORKING_DIR: ${{ inputs.working-directory }}
+  args:
+    - ${{ inputs.command }}
+    - '--config'
+    - ${{ inputs.config }}
+    - '--output'
+    - ${{ inputs.output }}
