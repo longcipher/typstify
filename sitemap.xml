@@ -2,71 +2,71 @@
 <?xml-stylesheet type="text/xsl" href="/sitemap-style.xsl"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
-    <loc>https://example.com/</loc>
+    <loc>https://longcipher.github.io/typstify/posts/hello-world</loc>
+    <lastmod>2024-01-15</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://longcipher.github.io/typstify/posts/hello-world" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://longcipher.github.io/typstify/zh/posts/hello-world" />
+  </url>
+  <url>
+    <loc>https://longcipher.github.io/typstify/about</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.5</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://longcipher.github.io/typstify/about" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://longcipher.github.io/typstify/zh/about" />
+  </url>
+  <url>
+    <loc>https://longcipher.github.io/typstify/zh/posts/hello-world</loc>
+    <lastmod>2024-01-15</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://longcipher.github.io/typstify/zh/posts/hello-world" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://longcipher.github.io/typstify/zh/zh/posts/hello-world" />
+  </url>
+  <url>
+    <loc>https://longcipher.github.io/typstify/zh/about</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.5</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://longcipher.github.io/typstify/zh/about" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://longcipher.github.io/typstify/zh/zh/about" />
+  </url>
+  <url>
+    <loc>https://longcipher.github.io/typstify/</loc>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
-    <xhtml:link rel="alternate" hreflang="en" href="https://example.com/" />
-    <xhtml:link rel="alternate" hreflang="zh" href="https://example.com/zh/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://longcipher.github.io/typstify/" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://longcipher.github.io/typstify/zh/" />
   </url>
   <url>
-    <loc>https://example.com/zh/posts/hello-world</loc>
-    <lastmod>2024-01-15</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-    <xhtml:link rel="alternate" hreflang="en" href="https://example.com/zh/posts/hello-world" />
-    <xhtml:link rel="alternate" hreflang="zh" href="https://example.com/zh/zh/posts/hello-world" />
-  </url>
-  <url>
-    <loc>https://example.com/zh/about</loc>
-    <changefreq>yearly</changefreq>
-    <priority>0.5</priority>
-    <xhtml:link rel="alternate" hreflang="en" href="https://example.com/zh/about" />
-    <xhtml:link rel="alternate" hreflang="zh" href="https://example.com/zh/zh/about" />
-  </url>
-  <url>
-    <loc>https://example.com/about</loc>
-    <changefreq>yearly</changefreq>
-    <priority>0.5</priority>
-    <xhtml:link rel="alternate" hreflang="en" href="https://example.com/about" />
-    <xhtml:link rel="alternate" hreflang="zh" href="https://example.com/zh/about" />
-  </url>
-  <url>
-    <loc>https://example.com/zh/</loc>
-    <changefreq>yearly</changefreq>
-    <priority>0.5</priority>
-    <xhtml:link rel="alternate" hreflang="en" href="https://example.com/zh/" />
-    <xhtml:link rel="alternate" hreflang="zh" href="https://example.com/zh/zh/" />
-  </url>
-  <url>
-    <loc>https://example.com/posts/hello-world</loc>
-    <lastmod>2024-01-15</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-    <xhtml:link rel="alternate" hreflang="en" href="https://example.com/posts/hello-world" />
-    <xhtml:link rel="alternate" hreflang="zh" href="https://example.com/zh/posts/hello-world" />
-  </url>
-  <url>
-    <loc>https://example.com/posts/getting-started</loc>
+    <loc>https://longcipher.github.io/typstify/posts/getting-started</loc>
     <lastmod>2024-01-20</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
-    <xhtml:link rel="alternate" hreflang="en" href="https://example.com/posts/getting-started" />
-    <xhtml:link rel="alternate" hreflang="zh" href="https://example.com/zh/posts/getting-started" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://longcipher.github.io/typstify/posts/getting-started" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://longcipher.github.io/typstify/zh/posts/getting-started" />
   </url>
   <url>
-    <loc>https://example.com/posts/advanced-features</loc>
-    <lastmod>2024-01-25</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-    <xhtml:link rel="alternate" hreflang="en" href="https://example.com/posts/advanced-features" />
-    <xhtml:link rel="alternate" hreflang="zh" href="https://example.com/zh/posts/advanced-features" />
-  </url>
-  <url>
-    <loc>https://example.com/docs/technical-spec</loc>
+    <loc>https://longcipher.github.io/typstify/docs/technical-spec</loc>
     <lastmod>2024-01-22</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
-    <xhtml:link rel="alternate" hreflang="en" href="https://example.com/docs/technical-spec" />
-    <xhtml:link rel="alternate" hreflang="zh" href="https://example.com/zh/docs/technical-spec" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://longcipher.github.io/typstify/docs/technical-spec" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://longcipher.github.io/typstify/zh/docs/technical-spec" />
+  </url>
+  <url>
+    <loc>https://longcipher.github.io/typstify/zh/</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.5</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://longcipher.github.io/typstify/zh/" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://longcipher.github.io/typstify/zh/zh/" />
+  </url>
+  <url>
+    <loc>https://longcipher.github.io/typstify/posts/advanced-features</loc>
+    <lastmod>2024-01-25</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://longcipher.github.io/typstify/posts/advanced-features" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://longcipher.github.io/typstify/zh/posts/advanced-features" />
   </url>
 </urlset>
