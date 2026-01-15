@@ -194,7 +194,7 @@ pub const DEFAULT_BASE_TEMPLATE: &str = r##"<!DOCTYPE html>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/assets/style.css">
+    <link rel="stylesheet" href="{{ base_path }}/assets/style.css">
     {{ custom_css? }}
     <script>
         // Inline critical JS to prevent FOUC (Flash of Unstyled Content)
@@ -249,7 +249,7 @@ pub const DEFAULT_BASE_TEMPLATE: &str = r##"<!DOCTYPE html>
             <p>&copy; {{ year }} {{ site_title }}. Built with <a href="https://github.com/longcipher/typstify">Typstify</a>.</p>
         </div>
     </footer>
-    <script src="/assets/main.js" defer></script>
+    <script src="{{ base_path }}/assets/main.js" defer></script>
     {{ custom_js? }}
 </body>
 </html>"##;
@@ -424,6 +424,7 @@ mod tests {
         let ctx = TemplateContext::new()
             .with_var("lang", "en")
             .with_var("title", "My Page")
+            .with_var("base_path", "")
             .with_var("canonical_url", "https://example.com/my-page")
             .with_var("content", "<p>Hello!</p>")
             .with_var("site_title", "My Site")

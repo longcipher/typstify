@@ -52,7 +52,7 @@ impl RssGenerator {
 
         let channel = ChannelBuilder::default()
             .title(&self.config.site.title)
-            .link(&self.config.site.base_url)
+            .link(self.config.base_url())
             .description(
                 self.config
                     .site
@@ -92,9 +92,9 @@ impl RssGenerator {
 
         // Determine the link for this language feed
         let link = if lang == self.config.site.default_language {
-            self.config.site.base_url.clone()
+            self.config.base_url().clone()
         } else {
-            format!("{}/{}", self.config.site.base_url, lang)
+            format!("{}/{}", self.config.base_url(), lang)
         };
 
         let channel = ChannelBuilder::default()
@@ -111,7 +111,7 @@ impl RssGenerator {
 
     /// Convert a page to an RSS item.
     fn page_to_item(&self, page: &Page) -> Option<Item> {
-        let url = format!("{}{}", self.config.site.base_url, page.url);
+        let url = format!("{}{}", self.config.base_url(), page.url);
 
         let guid = GuidBuilder::default().value(&url).permalink(true).build();
 
@@ -174,7 +174,8 @@ mod tests {
         Config {
             site: typstify_core::config::SiteConfig {
                 title: "Test Blog".to_string(),
-                base_url: "https://example.com".to_string(),
+                host: "https://example.com".to_string(),
+                base_path: String::new(),
                 default_language: "en".to_string(),
                 description: Some("A test blog".to_string()),
                 author: Some("Test Author".to_string()),

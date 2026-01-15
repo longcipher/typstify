@@ -122,7 +122,7 @@ impl SitemapGenerator {
 
     /// Convert a page to a sitemap URL entry.
     fn page_to_url(&self, page: &Page) -> SitemapUrl {
-        let loc = format!("{}{}", self.config.site.base_url, page.url);
+        let loc = format!("{}{}", self.config.base_url(), page.url);
 
         // Determine lastmod from page date or updated date
         let lastmod = page.updated.or(page.date);
@@ -147,9 +147,9 @@ impl SitemapGenerator {
                 .iter()
                 .map(|lang| {
                     let href = if *lang == self.config.site.default_language {
-                        format!("{}/{}", self.config.site.base_url, slug)
+                        format!("{}/{}", self.config.base_url(), slug)
                     } else {
-                        format!("{}/{}/{}", self.config.site.base_url, lang, slug)
+                        format!("{}/{}/{}", self.config.base_url(), lang, slug)
                     };
                     AlternateLink {
                         hreflang: lang.to_string(),
@@ -228,7 +228,8 @@ impl SitemapGenerator {
             xml.push_str("  <sitemap>\n");
             xml.push_str(&format!(
                 "    <loc>{}/{}</loc>\n",
-                self.config.site.base_url, sitemap
+                self.config.base_url(),
+                sitemap
             ));
             xml.push_str(&format!("    <lastmod>{now}</lastmod>\n"));
             xml.push_str("  </sitemap>\n");
@@ -566,7 +567,8 @@ mod tests {
         Config {
             site: typstify_core::config::SiteConfig {
                 title: "Test Site".to_string(),
-                base_url: "https://example.com".to_string(),
+                host: "https://example.com".to_string(),
+                base_path: String::new(),
                 default_language: "en".to_string(),
                 description: None,
                 author: None,

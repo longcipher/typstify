@@ -17,7 +17,8 @@ fn test_sample_site_config_loads() {
 
     let config = Config::load(config_path).expect("Config should load");
     assert_eq!(config.site.title, "My Typstify Blog");
-    assert_eq!(config.site.base_url, "https://example.com");
+    assert_eq!(config.site.host, "https://longcipher.github.io");
+    assert_eq!(config.site.base_path, "/typstify");
     assert_eq!(config.site.default_language, "en");
     assert!(config.has_language("en"));
     assert!(config.has_language("zh"));

@@ -27,6 +27,16 @@ if [ "$SUBCOMMAND" = "build" ]; then
     if [ "$INPUT_DRAFTS" = "true" ]; then
         CMD="$CMD --drafts"
     fi
+    
+    # Add host override if specified
+    if [ -n "$INPUT_HOST" ]; then
+        CMD="$CMD --host $INPUT_HOST"
+    fi
+    
+    # Add base-path override if specified (can be empty string to reset to no path)
+    if [ -n "${INPUT_BASE_PATH+x}" ]; then
+        CMD="$CMD --base-path \"$INPUT_BASE_PATH\""
+    fi
 fi
 
 # Execute the constructed command

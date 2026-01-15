@@ -4,7 +4,8 @@
 [site]
 title = "My Typstify Blog"
 description = "A sample blog built with Typstify"
-base_url = "https://example.com"
+host = "https://longcipher.github.io"
+base_path = "/typstify"
 default_language = "en"
 author = "Typstify Team"
 

@@ -54,7 +54,7 @@ impl RobotsGenerator {
         }
 
         // Add sitemap reference if configured (defaulting to sitemap.xml in root)
-        let sitemap_url = format!("{}/sitemap.xml", self.config.site.base_url);
+        let sitemap_url = format!("{}/sitemap.xml", self.config.base_url());
         writeln!(file, "Sitemap: {sitemap_url}")?;
 
         Ok(())

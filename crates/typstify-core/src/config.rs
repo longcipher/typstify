@@ -43,8 +43,14 @@ pub struct SiteConfig {
     /// Site title.
     pub title: String,
 
-    /// Base URL for the site (e.g., "https://example.com").
-    pub base_url: String,
+    /// Host URL for the site (e.g., "https://example.com").
+    /// This is the origin without any path.
+    pub host: String,
+
+    /// Base path for subdirectory deployments (e.g., "/typstify").
+    /// Empty string for root deployments.
+    #[serde(default)]
+    pub base_path: String,
 
     /// Default language code.
     #[serde(default = "default_language")]
@@ -280,23 +286,43 @@ impl Config {
             return Err(CoreError::config("site.title cannot be empty"));
         }
 
-        if self.site.base_url.is_empty() {
-            return Err(CoreError::config("site.base_url cannot be empty"));
+        if self.site.host.is_empty() {
+            return Err(CoreError::config("site.host cannot be empty"));
         }
 
-        // Ensure base_url doesn't have trailing slash
-        if self.site.base_url.ends_with('/') {
-            tracing::warn!("site.base_url should not have a trailing slash");
+        // Ensure host doesn't have trailing slash
+        if self.site.host.ends_with('/') {
+            tracing::warn!("site.host should not have a trailing slash");
+        }
+
+        // Ensure base_path starts with / if not empty
+        if !self.site.base_path.is_empty() && !self.site.base_path.starts_with('/') {
+            tracing::warn!("site.base_path should start with /");
         }
 
         Ok(())
     }
 
+    /// Get the full base URL (host + base_path).
+    #[must_use]
+    pub fn base_url(&self) -> String {
+        let host = self.site.host.trim_end_matches('/');
+        let base_path = self.site.base_path.trim_end_matches('/');
+        format!("{host}{base_path}")
+    }
+
     /// Get the full URL for a path.
     pub fn url_for(&self, path: &str) -> String {
-        let base = self.site.base_url.trim_end_matches('/');
+        let base = self.base_url();
         let path = path.trim_start_matches('/');
         format!("{base}/{path}")
+    }
+
+    /// Get the base path for URL generation.
+    /// Returns the configured base_path, ensuring no trailing slash.
+    #[must_use]
+    pub fn base_path(&self) -> &str {
+        self.site.base_path.trim_end_matches('/')
     }
 
     /// Check if a language code is configured (either as default or in languages map).
@@ -355,7 +381,7 @@ mod tests {
         r#"
 [site]
 title = "Test Site"
-base_url = "https://example.com"
+host = "https://example.com"
 default_language = "en"
 
 [languages.zh]
@@ -392,7 +418,7 @@ paginate = 20
         let config = Config::load(&config_path).expect("load config");
 
         assert_eq!(config.site.title, "Test Site");
-        assert_eq!(config.site.base_url, "https://example.com");
+        assert_eq!(config.site.host, "https://example.com");
         assert_eq!(config.site.default_language, "en");
         assert!(config.has_language("en"));
         assert!(config.has_language("zh"));
@@ -416,7 +442,7 @@ paginate = 20
         let minimal_config = r#"
 [site]
 title = "Minimal Site"
-base_url = "https://example.com"
+host = "https://example.com"
 "#;
         std::fs::write(&config_path, minimal_config).expect("write");
 
@@ -431,36 +457,13 @@ base_url = "https://example.com"
     }
 
     #[test]
-    fn test_url_for() {
-        let dir = tempfile::tempdir().expect("create temp dir");
-        let config_path = dir.path().join("config.toml");
-        let config_content = r#"
-[site]
-title = "Test"
-base_url = "https://example.com"
-"#;
-        std::fs::write(&config_path, config_content).expect("write");
-
-        let config = Config::load(&config_path).expect("load config");
-
-        assert_eq!(
-            config.url_for("/posts/hello"),
-            "https://example.com/posts/hello"
-        );
-        assert_eq!(
-            config.url_for("posts/hello"),
-            "https://example.com/posts/hello"
-        );
-    }
-
-    #[test]
     fn test_config_validation_empty_title() {
         let dir = tempfile::tempdir().expect("create temp dir");
         let config_path = dir.path().join("config.toml");
         let config_content = r#"
 [site]
 title = ""
-base_url = "https://example.com"
+host = "https://example.com"
 "#;
         std::fs::write(&config_path, config_content).expect("write");
 
@@ -479,5 +482,74 @@ base_url = "https://example.com"
         let result = Config::load(Path::new("/nonexistent/config.toml"));
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("not found"));
+    }
+
+    #[test]
+    fn test_base_path_empty() {
+        let dir = tempfile::tempdir().expect("create temp dir");
+        let config_path = dir.path().join("config.toml");
+        let config_content = r#"
+[site]
+title = "Test"
+host = "https://example.com"
+"#;
+        std::fs::write(&config_path, config_content).expect("write");
+        let config = Config::load(&config_path).expect("load");
+        assert_eq!(config.base_path(), "");
+        assert_eq!(config.base_url(), "https://example.com");
+    }
+
+    #[test]
+    fn test_base_path_subdirectory() {
+        let dir = tempfile::tempdir().expect("create temp dir");
+        let config_path = dir.path().join("config.toml");
+        let config_content = r#"
+[site]
+title = "Test"
+host = "https://longcipher.github.io"
+base_path = "/typstify"
+"#;
+        std::fs::write(&config_path, config_content).expect("write");
+        let config = Config::load(&config_path).expect("load");
+        assert_eq!(config.base_path(), "/typstify");
+        assert_eq!(config.base_url(), "https://longcipher.github.io/typstify");
+    }
+
+    #[test]
+    fn test_base_path_with_trailing_slash() {
+        let dir = tempfile::tempdir().expect("create temp dir");
+        let config_path = dir.path().join("config.toml");
+        let config_content = r#"
+[site]
+title = "Test"
+host = "https://longcipher.github.io/"
+base_path = "/typstify/"
+"#;
+        std::fs::write(&config_path, config_content).expect("write");
+        let config = Config::load(&config_path).expect("load");
+        assert_eq!(config.base_path(), "/typstify");
+        assert_eq!(config.base_url(), "https://longcipher.github.io/typstify");
+    }
+
+    #[test]
+    fn test_url_for() {
+        let dir = tempfile::tempdir().expect("create temp dir");
+        let config_path = dir.path().join("config.toml");
+        let config_content = r#"
+[site]
+title = "Test"
+host = "https://example.com"
+base_path = "/blog"
+"#;
+        std::fs::write(&config_path, config_content).expect("write");
+        let config = Config::load(&config_path).expect("load");
+        assert_eq!(
+            config.url_for("/posts/hello"),
+            "https://example.com/blog/posts/hello"
+        );
+        assert_eq!(
+            config.url_for("posts/hello"),
+            "https://example.com/blog/posts/hello"
+        );
     }
 }

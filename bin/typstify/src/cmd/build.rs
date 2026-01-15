@@ -11,9 +11,22 @@ use super::check::quick_validate;
 /// Run the build command.
 ///
 /// Builds the static site from content files to the output directory.
-pub fn run(config_path: &Path, output: &Path, drafts: bool) -> Result<()> {
+pub fn run(
+    config_path: &Path,
+    output: &Path,
+    drafts: bool,
+    host: Option<&str>,
+    base_path: Option<&str>,
+) -> Result<()> {
     let start = Instant::now();
-    tracing::info!(?config_path, ?output, drafts, "Starting build");
+    tracing::info!(
+        ?config_path,
+        ?output,
+        drafts,
+        ?host,
+        ?base_path,
+        "Starting build"
+    );
 
     // Load configuration
     let mut config = Config::load(config_path).wrap_err("Failed to load configuration")?;
@@ -34,6 +47,18 @@ pub fn run(config_path: &Path, output: &Path, drafts: bool) -> Result<()> {
 
     // Include drafts if flag is set
     config.build.drafts = drafts;
+
+    // Override host if specified via CLI
+    if let Some(h) = host {
+        tracing::info!(host = h, "Overriding site host from CLI");
+        config.site.host = h.to_string();
+    }
+
+    // Override base_path if specified via CLI
+    if let Some(bp) = base_path {
+        tracing::info!(base_path = bp, "Overriding site base_path from CLI");
+        config.site.base_path = bp.to_string();
+    }
 
     tracing::debug!(?config, "Loaded configuration");
 

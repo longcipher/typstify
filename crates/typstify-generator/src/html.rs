@@ -68,10 +68,10 @@ impl HtmlGenerator {
     }
 
     /// Generate navigation HTML for content sections.
-    fn generate_section_nav(&self, lang_prefix: &str) -> String {
+    fn generate_section_nav(&self, base_path: &str, lang_prefix: &str) -> String {
         if self.sections.is_empty() {
             // Default to "Posts" if no sections configured
-            return format!(r#"<a href="{lang_prefix}/posts">Posts</a>"#);
+            return format!(r#"<a href="{base_path}{lang_prefix}/posts">Posts</a>"#);
         }
 
         // Filter out language codes (2-3 letter codes) and standalone pages like "about"
@@ -90,7 +90,7 @@ impl HtmlGenerator {
             .collect();
 
         if filtered_sections.is_empty() {
-            return format!(r#"<a href="{lang_prefix}/posts">Posts</a>"#);
+            return format!(r#"<a href="{base_path}{lang_prefix}/posts">Posts</a>"#);
         }
 
         filtered_sections
@@ -102,7 +102,7 @@ impl HtmlGenerator {
                     .next()
                     .map(|c| c.to_uppercase().collect::<String>() + &section[1..])
                     .unwrap_or_else(|| (*section).clone());
-                format!(r#"<a href="{lang_prefix}/{section}">{title}</a>"#)
+                format!(r#"<a href="{base_path}{lang_prefix}/{section}">{title}</a>"#)
             })
             .collect::<Vec<_>>()
             .join("\n                    ")
@@ -162,24 +162,28 @@ impl HtmlGenerator {
 
         let inner_html = self.templates.render("list", &ctx)?;
 
+        // Get the base path for subdirectory deployments
+        let base_path = self.config.base_path();
+
         // Wrap in base template
         let base_ctx = TemplateContext::new()
             .with_var("lang", &self.config.site.default_language)
             .with_var("title", title)
+            .with_var("base_path", base_path)
             .with_var(
                 "site_title_suffix",
                 format!(" | {}", self.config.site.title),
             )
-            .with_var("canonical_url", &self.config.site.base_url)
+            .with_var("canonical_url", self.config.base_url())
             .with_var("content", &inner_html)
             .with_var("site_title", &self.config.site.title)
             .with_var("year", Utc::now().year().to_string())
             // Navigation URLs
-            .with_var("nav_home_url", "/")
-            .with_var("nav_archives_url", "/archives")
-            .with_var("nav_tags_url", "/tags")
-            .with_var("nav_about_url", "/about")
-            .with_var("section_nav", self.generate_section_nav(""));
+            .with_var("nav_home_url", format!("{base_path}/"))
+            .with_var("nav_archives_url", format!("{base_path}/archives"))
+            .with_var("nav_tags_url", format!("{base_path}/tags"))
+            .with_var("nav_about_url", format!("{base_path}/about"))
+            .with_var("section_nav", self.generate_section_nav(base_path, ""));
 
         Ok(self.templates.render("base", &base_ctx)?)
     }
@@ -204,10 +208,14 @@ impl HtmlGenerator {
         let inner_html = self.templates.render("taxonomy", &ctx)?;
         let title = format!("{taxonomy_name}: {term}");
 
+        // Get the base path for subdirectory deployments
+        let base_path = self.config.base_path();
+
         // Wrap in base template
         let base_ctx = TemplateContext::new()
             .with_var("lang", &self.config.site.default_language)
             .with_var("title", &title)
+            .with_var("base_path", base_path)
             .with_var(
                 "site_title_suffix",
                 format!(" | {}", self.config.site.title),
@@ -216,7 +224,7 @@ impl HtmlGenerator {
                 "canonical_url",
                 format!(
                     "{}/{}/{}",
-                    self.config.site.base_url,
+                    self.config.base_url(),
                     taxonomy_name.to_lowercase(),
                     term
                 ),
@@ -225,11 +233,11 @@ impl HtmlGenerator {
             .with_var("site_title", &self.config.site.title)
             .with_var("year", Utc::now().year().to_string())
             // Navigation URLs
-            .with_var("nav_home_url", "/")
-            .with_var("nav_archives_url", "/archives")
-            .with_var("nav_tags_url", "/tags")
-            .with_var("nav_about_url", "/about")
-            .with_var("section_nav", self.generate_section_nav(""));
+            .with_var("nav_home_url", format!("{base_path}/"))
+            .with_var("nav_archives_url", format!("{base_path}/archives"))
+            .with_var("nav_tags_url", format!("{base_path}/tags"))
+            .with_var("nav_about_url", format!("{base_path}/about"))
+            .with_var("section_nav", self.generate_section_nav(base_path, ""));
 
         Ok(self.templates.render("base", &base_ctx)?)
     }
@@ -259,12 +267,18 @@ impl HtmlGenerator {
 
         // Add tags HTML if present
         if !page.tags.is_empty() {
+            let base_path = self.config.base_path();
+            let lang_prefix = if page.is_default_lang {
+                String::new()
+            } else {
+                format!("/{}", page.lang)
+            };
             let tags_html = page
                 .tags
                 .iter()
                 .map(|tag| {
                     format!(
-                        r#"<a href="/tags/{}" rel="tag">{}</a>"#,
+                        r#"<a href="{base_path}{lang_prefix}/tags/{}" rel="tag">{}</a>"#,
                         slug_from_str(tag),
                         tag
                     )
@@ -287,6 +301,9 @@ impl HtmlGenerator {
         inner_html: &str,
         alternates: &[(&str, &str)],
     ) -> Result<TemplateContext> {
+        // Get the base path for subdirectory deployments (e.g., "/typstify")
+        let base_path = self.config.base_path();
+
         // Determine language prefix for URLs
         let lang_prefix = if page.is_default_lang {
             String::new()
@@ -297,24 +314,31 @@ impl HtmlGenerator {
         let mut ctx = TemplateContext::new()
             .with_var("lang", &page.lang)
             .with_var("title", &page.title)
+            .with_var("base_path", base_path)
             .with_var(
                 "site_title_suffix",
                 format!(" | {}", self.config.title_for_language(&page.lang)),
             )
             .with_var(
                 "canonical_url",
-                format!("{}{}", self.config.site.base_url, page.url),
+                format!("{}{}", self.config.base_url(), page.url),
             )
             .with_var("content", inner_html)
             .with_var("site_title", self.config.title_for_language(&page.lang))
             .with_var("year", Utc::now().year().to_string())
-            // Navigation URLs with language prefix
-            .with_var("nav_home_url", format!("{lang_prefix}/"))
-            .with_var("nav_archives_url", format!("{lang_prefix}/archives"))
-            .with_var("nav_tags_url", format!("{lang_prefix}/tags"))
-            .with_var("nav_about_url", format!("{lang_prefix}/about"))
+            // Navigation URLs with base path and language prefix
+            .with_var("nav_home_url", format!("{base_path}{lang_prefix}/"))
+            .with_var(
+                "nav_archives_url",
+                format!("{base_path}{lang_prefix}/archives"),
+            )
+            .with_var("nav_tags_url", format!("{base_path}{lang_prefix}/tags"))
+            .with_var("nav_about_url", format!("{base_path}{lang_prefix}/about"))
             // Dynamic section navigation
-            .with_var("section_nav", self.generate_section_nav(&lang_prefix));
+            .with_var(
+                "section_nav",
+                self.generate_section_nav(base_path, &lang_prefix),
+            );
 
         // Add description if present
         if let Some(desc) = &page.description {
@@ -363,7 +387,9 @@ impl HtmlGenerator {
                 .map(|(lang, url)| {
                     format!(
                         r#"<link rel="alternate" hreflang="{}" href="{}{}" />"#,
-                        lang, self.config.site.base_url, url
+                        lang,
+                        self.config.base_url(),
+                        url
                     )
                 })
                 .collect::<Vec<_>>()
@@ -381,6 +407,7 @@ impl HtmlGenerator {
             return String::new();
         }
 
+        let base_path = self.config.base_path();
         let mut options = Vec::new();
 
         for lang in &all_langs {
@@ -388,16 +415,16 @@ impl HtmlGenerator {
             let url = if *lang == self.config.site.default_language {
                 // Default language: no prefix
                 if canonical_id.is_empty() {
-                    "/".to_string()
+                    format!("{base_path}/")
                 } else {
-                    format!("/{canonical_id}")
+                    format!("{base_path}/{canonical_id}")
                 }
             } else {
                 // Non-default language: add prefix
                 if canonical_id.is_empty() {
-                    format!("/{lang}/")
+                    format!("{base_path}/{lang}/")
                 } else {
-                    format!("/{lang}/{canonical_id}")
+                    format!("{base_path}/{lang}/{canonical_id}")
                 }
             };
 
@@ -449,6 +476,9 @@ impl HtmlGenerator {
             format!("/{lang}")
         };
 
+        // Get the base path for subdirectory deployments
+        let base_path = self.config.base_path();
+
         let mut items: Vec<_> = tags.iter().collect();
         items.sort_by(|a, b| b.1.len().cmp(&a.1.len())); // Sort by count descending
 
@@ -456,8 +486,7 @@ impl HtmlGenerator {
             .iter()
             .map(|(tag, pages)| {
                 format!(
-                    r#"<a href="{}/tags/{}" class="tag-item"><span class="tag-name">{}</span><span class="tag-count">{}</span></a>"#,
-                    lang_prefix,
+                    r#"<a href="{base_path}{lang_prefix}/tags/{}" class="tag-item"><span class="tag-name">{}</span><span class="tag-count">{}</span></a>"#,
                     slug_from_str(tag),
                     tag,
                     pages.len()
@@ -472,23 +501,30 @@ impl HtmlGenerator {
         let mut base_ctx = TemplateContext::new()
             .with_var("lang", lang)
             .with_var("title", "Tags")
+            .with_var("base_path", base_path)
             .with_var(
                 "site_title_suffix",
                 format!(" | {}", self.config.title_for_language(lang)),
             )
             .with_var(
                 "canonical_url",
-                format!("{}{}/tags", self.config.site.base_url, lang_prefix),
+                format!("{}{}/tags", self.config.base_url(), lang_prefix),
             )
             .with_var("content", &inner_html)
             .with_var("site_title", self.config.title_for_language(lang))
             .with_var("year", Utc::now().year().to_string())
             // Navigation URLs
-            .with_var("nav_home_url", format!("{lang_prefix}/"))
-            .with_var("nav_archives_url", format!("{lang_prefix}/archives"))
-            .with_var("nav_tags_url", format!("{lang_prefix}/tags"))
-            .with_var("nav_about_url", format!("{lang_prefix}/about"))
-            .with_var("section_nav", self.generate_section_nav(&lang_prefix));
+            .with_var("nav_home_url", format!("{base_path}{lang_prefix}/"))
+            .with_var(
+                "nav_archives_url",
+                format!("{base_path}{lang_prefix}/archives"),
+            )
+            .with_var("nav_tags_url", format!("{base_path}{lang_prefix}/tags"))
+            .with_var("nav_about_url", format!("{base_path}{lang_prefix}/about"))
+            .with_var(
+                "section_nav",
+                self.generate_section_nav(base_path, &lang_prefix),
+            );
 
         // Generate language switcher
         let lang_switcher = self.generate_lang_switcher(lang, "tags");
@@ -512,6 +548,9 @@ impl HtmlGenerator {
             format!("/{lang}")
         };
 
+        // Get the base path for subdirectory deployments
+        let base_path = self.config.base_path();
+
         let mut items: Vec<_> = categories.iter().collect();
         items.sort_by(|a, b| a.0.cmp(b.0)); // Sort alphabetically
 
@@ -519,8 +558,7 @@ impl HtmlGenerator {
             .iter()
             .map(|(category, pages)| {
                 format!(
-                    r#"<li><a href="{}/categories/{}">{}</a> <span class="count">({})</span></li>"#,
-                    lang_prefix,
+                    r#"<li><a href="{base_path}{lang_prefix}/categories/{}">{}</a> <span class="count">({})</span></li>"#,
                     slug_from_str(category),
                     category,
                     pages.len()
@@ -535,23 +573,30 @@ impl HtmlGenerator {
         let mut base_ctx = TemplateContext::new()
             .with_var("lang", lang)
             .with_var("title", "Categories")
+            .with_var("base_path", base_path)
             .with_var(
                 "site_title_suffix",
                 format!(" | {}", self.config.title_for_language(lang)),
             )
             .with_var(
                 "canonical_url",
-                format!("{}{}/categories", self.config.site.base_url, lang_prefix),
+                format!("{}{}/categories", self.config.base_url(), lang_prefix),
             )
             .with_var("content", &inner_html)
             .with_var("site_title", self.config.title_for_language(lang))
             .with_var("year", Utc::now().year().to_string())
             // Navigation URLs
-            .with_var("nav_home_url", format!("{lang_prefix}/"))
-            .with_var("nav_archives_url", format!("{lang_prefix}/archives"))
-            .with_var("nav_tags_url", format!("{lang_prefix}/tags"))
-            .with_var("nav_about_url", format!("{lang_prefix}/about"))
-            .with_var("section_nav", self.generate_section_nav(&lang_prefix));
+            .with_var("nav_home_url", format!("{base_path}{lang_prefix}/"))
+            .with_var(
+                "nav_archives_url",
+                format!("{base_path}{lang_prefix}/archives"),
+            )
+            .with_var("nav_tags_url", format!("{base_path}{lang_prefix}/tags"))
+            .with_var("nav_about_url", format!("{base_path}{lang_prefix}/about"))
+            .with_var(
+                "section_nav",
+                self.generate_section_nav(base_path, &lang_prefix),
+            );
 
         // Generate language switcher
         let lang_switcher = self.generate_lang_switcher(lang, "categories");
@@ -624,26 +669,36 @@ impl HtmlGenerator {
         let ctx = TemplateContext::new().with_var("items", &items_html);
         let inner_html = self.templates.render("archives", &ctx)?;
 
+        // Get the base path for subdirectory deployments
+        let base_path = self.config.base_path();
+
         let mut base_ctx = TemplateContext::new()
             .with_var("lang", lang)
             .with_var("title", "Archives")
+            .with_var("base_path", base_path)
             .with_var(
                 "site_title_suffix",
                 format!(" | {}", self.config.title_for_language(lang)),
             )
             .with_var(
                 "canonical_url",
-                format!("{}{}/archives", self.config.site.base_url, lang_prefix),
+                format!("{}{}/archives", self.config.base_url(), lang_prefix),
             )
             .with_var("content", &inner_html)
             .with_var("site_title", self.config.title_for_language(lang))
             .with_var("year", Utc::now().year().to_string())
             // Navigation URLs
-            .with_var("nav_home_url", format!("{lang_prefix}/"))
-            .with_var("nav_archives_url", format!("{lang_prefix}/archives"))
-            .with_var("nav_tags_url", format!("{lang_prefix}/tags"))
-            .with_var("nav_about_url", format!("{lang_prefix}/about"))
-            .with_var("section_nav", self.generate_section_nav(&lang_prefix));
+            .with_var("nav_home_url", format!("{base_path}{lang_prefix}/"))
+            .with_var(
+                "nav_archives_url",
+                format!("{base_path}{lang_prefix}/archives"),
+            )
+            .with_var("nav_tags_url", format!("{base_path}{lang_prefix}/tags"))
+            .with_var("nav_about_url", format!("{base_path}{lang_prefix}/about"))
+            .with_var(
+                "section_nav",
+                self.generate_section_nav(base_path, &lang_prefix),
+            );
 
         // Generate language switcher
         let lang_switcher = self.generate_lang_switcher(lang, "archives");
@@ -691,26 +746,36 @@ impl HtmlGenerator {
 
         let inner_html = self.templates.render("section", &ctx)?;
 
+        // Get the base path for subdirectory deployments
+        let base_path = self.config.base_path();
+
         let mut base_ctx = TemplateContext::new()
             .with_var("lang", lang)
             .with_var("title", &title)
+            .with_var("base_path", base_path)
             .with_var(
                 "site_title_suffix",
                 format!(" | {}", self.config.title_for_language(lang)),
             )
             .with_var(
                 "canonical_url",
-                format!("{}{}/{}", self.config.site.base_url, lang_prefix, section),
+                format!("{}{}/{}", self.config.base_url(), lang_prefix, section),
             )
             .with_var("content", &inner_html)
             .with_var("site_title", self.config.title_for_language(lang))
             .with_var("year", Utc::now().year().to_string())
             // Navigation URLs
-            .with_var("nav_home_url", format!("{lang_prefix}/"))
-            .with_var("nav_archives_url", format!("{lang_prefix}/archives"))
-            .with_var("nav_tags_url", format!("{lang_prefix}/tags"))
-            .with_var("nav_about_url", format!("{lang_prefix}/about"))
-            .with_var("section_nav", self.generate_section_nav(&lang_prefix));
+            .with_var("nav_home_url", format!("{base_path}{lang_prefix}/"))
+            .with_var(
+                "nav_archives_url",
+                format!("{base_path}{lang_prefix}/archives"),
+            )
+            .with_var("nav_tags_url", format!("{base_path}{lang_prefix}/tags"))
+            .with_var("nav_about_url", format!("{base_path}{lang_prefix}/about"))
+            .with_var(
+                "section_nav",
+                self.generate_section_nav(base_path, &lang_prefix),
+            );
 
         // Generate language switcher
         let lang_switcher = self.generate_lang_switcher(lang, section);
@@ -759,26 +824,36 @@ impl HtmlGenerator {
         // Use shorts template
         let inner_html = self.templates.render("shorts", &ctx)?;
 
+        // Get the base path for subdirectory deployments
+        let base_path = self.config.base_path();
+
         let mut base_ctx = TemplateContext::new()
             .with_var("lang", lang)
             .with_var("title", &title)
+            .with_var("base_path", base_path)
             .with_var(
                 "site_title_suffix",
                 format!(" | {}", self.config.title_for_language(lang)),
             )
             .with_var(
                 "canonical_url",
-                format!("{}{}/{}", self.config.site.base_url, lang_prefix, section),
+                format!("{}{}/{}", self.config.base_url(), lang_prefix, section),
             )
             .with_var("content", &inner_html)
             .with_var("site_title", self.config.title_for_language(lang))
             .with_var("year", Utc::now().year().to_string())
             // Navigation URLs
-            .with_var("nav_home_url", format!("{lang_prefix}/"))
-            .with_var("nav_archives_url", format!("{lang_prefix}/archives"))
-            .with_var("nav_tags_url", format!("{lang_prefix}/tags"))
-            .with_var("nav_about_url", format!("{lang_prefix}/about"))
-            .with_var("section_nav", self.generate_section_nav(&lang_prefix));
+            .with_var("nav_home_url", format!("{base_path}{lang_prefix}/"))
+            .with_var(
+                "nav_archives_url",
+                format!("{base_path}{lang_prefix}/archives"),
+            )
+            .with_var("nav_tags_url", format!("{base_path}{lang_prefix}/tags"))
+            .with_var("nav_about_url", format!("{base_path}{lang_prefix}/about"))
+            .with_var(
+                "section_nav",
+                self.generate_section_nav(base_path, &lang_prefix),
+            );
 
         // Generate language switcher
         let lang_switcher = self.generate_lang_switcher(lang, section);
@@ -928,7 +1003,8 @@ mod tests {
         Config {
             site: typstify_core::config::SiteConfig {
                 title: "Test Site".to_string(),
-                base_url: "https://example.com".to_string(),
+                host: "https://example.com".to_string(),
+                base_path: String::new(),
                 default_language: "en".to_string(),
                 description: Some("A test site".to_string()),
                 author: Some("Test Author".to_string()),

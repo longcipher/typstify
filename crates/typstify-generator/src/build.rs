@@ -553,7 +553,7 @@ impl Builder {
 
         for page in content.pages.values() {
             for alias in &page.aliases {
-                let redirect_url = format!("{}{}", self.config.site.base_url, page.url);
+                let redirect_url = format!("{}{}", self.config.base_url(), page.url);
                 let html = generator.generate_redirect(&redirect_url)?;
 
                 let alias_path = alias.trim_matches('/');
@@ -719,7 +719,8 @@ mod tests {
         Config {
             site: typstify_core::config::SiteConfig {
                 title: "Test Site".to_string(),
-                base_url: "https://example.com".to_string(),
+                host: "https://example.com".to_string(),
+                base_path: String::new(),
                 default_language: "en".to_string(),
                 description: None,
                 author: None,

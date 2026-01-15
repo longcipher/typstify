@@ -17,7 +17,14 @@
 //! use typstify::cmd;
 //!
 //! // Build a static site
-//! cmd::build::run(Path::new("config.toml"), Path::new("public"), false).unwrap();
+//! cmd::build::run(
+//!     Path::new("config.toml"),
+//!     Path::new("public"),
+//!     false,
+//!     None,
+//!     None,
+//! )
+//! .unwrap();
 //! ```
 
 pub mod cmd;

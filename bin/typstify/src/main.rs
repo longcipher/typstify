@@ -38,6 +38,12 @@ enum Commands {
         /// Include draft posts
         #[arg(long)]
         drafts: bool,
+        /// Override site host (e.g., https://example.com)
+        #[arg(long)]
+        host: Option<String>,
+        /// Override site base path (e.g., /my-blog)
+        #[arg(long)]
+        base_path: Option<String>,
     },
     /// Start development server with live reload
     Watch {
@@ -72,8 +78,19 @@ async fn main() -> Result<()> {
     typstify::init_tracing(cli.verbose);
 
     match cli.command {
-        Commands::Build { output, drafts } => {
-            typstify::cmd::build::run(&cli.config, &output, drafts)?;
+        Commands::Build {
+            output,
+            drafts,
+            host,
+            base_path,
+        } => {
+            typstify::cmd::build::run(
+                &cli.config,
+                &output,
+                drafts,
+                host.as_deref(),
+                base_path.as_deref(),
+            )?;
         }
         Commands::Watch { port, open } => {
             typstify::cmd::watch::run(&cli.config, port, open).await?;
@@ -104,9 +121,16 @@ mod tests {
         assert_eq!(cli.verbose, 0);
 
         match cli.command {
-            Commands::Build { output, drafts } => {
+            Commands::Build {
+                output,
+                drafts,
+                host,
+                base_path,
+            } => {
                 assert_eq!(output, std::path::PathBuf::from("dist"));
                 assert!(!drafts);
+                assert!(host.is_none());
+                assert!(base_path.is_none());
             }
             _ => panic!("Expected Build command"),
         }
@@ -178,5 +202,28 @@ mod tests {
         let args = ["typstify", "--config", "site.toml", "build"];
         let cli = Cli::parse_from(args);
         assert_eq!(cli.config, std::path::PathBuf::from("site.toml"));
+    }
+
+    #[test]
+    fn test_cli_build_with_host_and_base_path() {
+        let args = [
+            "typstify",
+            "build",
+            "--host",
+            "https://example.com",
+            "--base-path",
+            "/blog",
+        ];
+        let cli = Cli::parse_from(args);
+
+        match cli.command {
+            Commands::Build {
+                host, base_path, ..
+            } => {
+                assert_eq!(host.as_deref(), Some("https://example.com"));
+                assert_eq!(base_path.as_deref(), Some("/blog"));
+            }
+            _ => panic!("Expected Build command"),
+        }
     }
 }

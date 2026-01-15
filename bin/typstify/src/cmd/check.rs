@@ -250,11 +250,11 @@ fn check_directories(result: &mut ValidationResult) {
 
 /// Check configuration values for common issues.
 fn check_config_values(config: &Config, result: &mut ValidationResult) {
-    // Check base_url
-    if config.site.base_url.is_empty() {
-        result.add_warning("site.base_url is empty");
-    } else if !config.site.base_url.starts_with("http") {
-        result.add_warning("site.base_url should start with http:// or https://");
+    // Check host
+    if config.site.host.is_empty() {
+        result.add_warning("site.host is empty");
+    } else if !config.site.host.starts_with("http") {
+        result.add_warning("site.host should start with http:// or https://");
     }
 
     // Check title

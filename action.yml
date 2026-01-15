@@ -23,6 +23,12 @@ inputs:
     description: 'Include draft posts in build'
     required: false
     default: 'false'
+  host:
+    description: 'Override site host (e.g., https://example.com)'
+    required: false
+  base-path:
+    description: 'Override site base path (e.g., /my-blog)'
+    required: false
   working-directory:
     description: 'Working directory (relative to repository root)'
     required: false

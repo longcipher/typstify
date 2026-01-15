@@ -26,6 +26,8 @@ jobs:
           config: config.toml
           output: public
           working-directory: examples/blog
+          host: https://typstify-example-blog.workers.dev
+          base-path: ""
 
       - name: Fix permissions
         if: always()

@@ -309,7 +309,8 @@ mod tests {
         Config {
             site: typstify_core::config::SiteConfig {
                 title: "Test Site".to_string(),
-                base_url: "https://example.com".to_string(),
+                host: "https://example.com".to_string(),
+                base_path: String::new(),
                 default_language: "en".to_string(),
                 description: None,
                 author: None,
