@@ -1,0 +1,12 @@
+{
+  "name": "typstify-example-blog",
+  "main": "worker.js",
+  "compatibility_date": "2026-01-15",
+  "compatibility_flags": ["nodejs_compat"],
+  "site": {
+    "bucket": "./public"
+  },
+  "build": {
+    "command": "echo 'Static site ready'"
+  }
+}
