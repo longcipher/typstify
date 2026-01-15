@@ -11,6 +11,10 @@ keywords.workspace = true
 categories.workspace = true
 description.workspace = true
 
+[lib]
+name = "typstify"
+path = "src/lib.rs"
+
 [[bin]]
 name = "typstify"
 path = "src/main.rs"

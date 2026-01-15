@@ -69,14 +69,44 @@ impl RssGenerator {
     }
 
     /// Generate RSS feed for a specific language.
+    ///
+    /// Uses the language-specific title, description, and sets the appropriate
+    /// language code in the feed.
     pub fn generate_for_lang(&self, pages: &[&Page], lang: &str) -> Result<String> {
-        let filtered: Vec<_> = pages
+        let limit = self.config.rss.limit;
+        let pages: Vec<_> = pages.iter().take(limit).collect();
+
+        debug!(
+            count = pages.len(),
+            limit, lang, "generating language-specific RSS feed"
+        );
+
+        let items: Vec<Item> = pages
             .iter()
-            .filter(|p| p.lang.as_deref() == Some(lang) || p.lang.is_none())
-            .copied()
+            .filter_map(|page| self.page_to_item(page))
             .collect();
 
-        self.generate(&filtered)
+        // Get language-specific title and description
+        let title = self.config.title_for_language(lang);
+        let description = self.config.description_for_language(lang).unwrap_or(title);
+
+        // Determine the link for this language feed
+        let link = if lang == self.config.site.default_language {
+            self.config.site.base_url.clone()
+        } else {
+            format!("{}/{}", self.config.site.base_url, lang)
+        };
+
+        let channel = ChannelBuilder::default()
+            .title(title)
+            .link(&link)
+            .description(description)
+            .language(Some(lang.to_string()))
+            .last_build_date(Some(Utc::now().to_rfc2822()))
+            .items(items)
+            .build();
+
+        Ok(channel.to_string())
     }
 
     /// Convert a page to an RSS item.
@@ -134,7 +164,7 @@ impl RssGenerator {
 
 #[cfg(test)]
 mod tests {
-    use std::path::PathBuf;
+    use std::{collections::HashMap, path::PathBuf};
 
     use chrono::{DateTime, Utc};
 
@@ -146,16 +176,17 @@ mod tests {
                 title: "Test Blog".to_string(),
                 base_url: "https://example.com".to_string(),
                 default_language: "en".to_string(),
-                languages: vec!["en".to_string()],
                 description: Some("A test blog".to_string()),
                 author: Some("Test Author".to_string()),
             },
+            languages: HashMap::new(),
             build: typstify_core::config::BuildConfig::default(),
             search: typstify_core::config::SearchConfig::default(),
             rss: typstify_core::config::RssConfig {
                 enabled: true,
                 limit: 20,
             },
+            robots: typstify_core::config::RobotsConfig::default(),
             taxonomies: typstify_core::config::TaxonomyConfig::default(),
         }
     }
@@ -168,7 +199,9 @@ mod tests {
             date,
             updated: None,
             draft: false,
-            lang: None,
+            lang: "en".to_string(),
+            is_default_lang: true,
+            canonical_id: title.to_lowercase().replace(' ', "-"),
             tags: vec!["rust".to_string(), "web".to_string()],
             categories: vec![],
             content: String::new(),

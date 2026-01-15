@@ -42,10 +42,17 @@ pub struct ContentPath {
     /// Original file path.
     pub path: PathBuf,
 
-    /// Extracted language code (if any).
-    pub lang: Option<String>,
+    /// Language code for this content (always set, defaults to site default).
+    pub lang: String,
 
-    /// URL slug derived from the path.
+    /// Whether this is the default language version.
+    pub is_default_lang: bool,
+
+    /// Canonical identifier for translation linking (language-neutral slug).
+    /// Used to group translations: "posts/hello" in both "hello.md" and "hello.zh.md"
+    pub canonical_id: String,
+
+    /// URL slug derived from the path (may include language prefix for non-default).
     pub slug: String,
 
     /// Content type based on extension.
@@ -56,10 +63,10 @@ impl ContentPath {
     /// Parse a content path to extract language and slug.
     ///
     /// Supports patterns like:
-    /// - `posts/hello.md` → slug: "posts/hello", lang: None
-    /// - `posts/hello.zh.md` → slug: "posts/hello", lang: Some("zh")
-    /// - `posts/hello/index.md` → slug: "posts/hello", lang: None
-    /// - `posts/hello/index.zh.md` → slug: "posts/hello", lang: Some("zh")
+    /// - `posts/hello.md` → lang: "en" (default), canonical_id: "posts/hello", slug: "posts/hello"
+    /// - `posts/hello.zh.md` → lang: "zh", canonical_id: "posts/hello", slug: "zh/posts/hello"
+    /// - `posts/hello/index.md` → lang: "en" (default), canonical_id: "posts/hello", slug: "posts/hello"
+    /// - `posts/hello/index.zh.md` → lang: "zh", canonical_id: "posts/hello", slug: "zh/posts/hello"
     pub fn from_path(path: &Path, default_lang: &str) -> Option<Self> {
         let extension = path.extension()?.to_str()?;
         let content_type = ContentType::from_extension(extension)?;
@@ -67,19 +74,14 @@ impl ContentPath {
         let stem = path.file_stem()?.to_str()?;
 
         // Check for language suffix in filename (e.g., "index.zh" or "hello.zh")
-        let (base_stem, lang) = if let Some(dot_pos) = stem.rfind('.') {
+        let (base_stem, detected_lang) = if let Some(dot_pos) = stem.rfind('.') {
             let potential_lang = &stem[dot_pos + 1..];
             // Check if it looks like a language code (2-3 chars, lowercase alpha)
             if potential_lang.len() >= 2
                 && potential_lang.len() <= 3
                 && potential_lang.chars().all(|c| c.is_ascii_lowercase())
             {
-                let lang = if potential_lang == default_lang {
-                    None // Don't set lang if it's the default
-                } else {
-                    Some(potential_lang.to_string())
-                };
-                (&stem[..dot_pos], lang)
+                (&stem[..dot_pos], Some(potential_lang.to_string()))
             } else {
                 (stem, None)
             }
@@ -87,10 +89,14 @@ impl ContentPath {
             (stem, None)
         };
 
-        // Build the slug from the path
+        // Determine final language and whether it's the default
+        let lang = detected_lang.unwrap_or_else(|| default_lang.to_string());
+        let is_default_lang = lang == default_lang;
+
+        // Build the canonical_id (language-neutral) from the path
         let parent = path.parent().unwrap_or(Path::new(""));
-        let slug = if base_stem == "index" {
-            // For index files, use the parent directory as the slug
+        let canonical_id = if base_stem == "index" {
+            // For index files, use the parent directory as the canonical id
             parent.to_string_lossy().to_string()
         } else {
             // For regular files, combine parent and stem
@@ -101,12 +107,21 @@ impl ContentPath {
             }
         };
 
-        // Normalize slug: remove leading/trailing slashes
-        let slug = slug.trim_matches('/').to_string();
+        // Normalize canonical_id: remove leading/trailing slashes
+        let canonical_id = canonical_id.trim_matches('/').to_string();
+
+        // Build the URL slug (includes language prefix for non-default languages)
+        let slug = if is_default_lang {
+            canonical_id.clone()
+        } else {
+            format!("{lang}/{canonical_id}")
+        };
 
         Some(Self {
             path: path.to_path_buf(),
             lang,
+            is_default_lang,
+            canonical_id,
             slug,
             content_type,
         })
@@ -114,11 +129,7 @@ impl ContentPath {
 
     /// Get the URL path for this content.
     pub fn url_path(&self) -> String {
-        if let Some(ref lang) = self.lang {
-            format!("/{}/{}", lang, self.slug)
-        } else {
-            format!("/{}", self.slug)
-        }
+        format!("/{}", self.slug)
     }
 }
 
@@ -176,9 +187,16 @@ pub struct Page {
     #[serde(default)]
     pub draft: bool,
 
-    /// Language code.
+    /// Language code for this page.
+    pub lang: String,
+
+    /// Whether this is the default language version.
     #[serde(default)]
-    pub lang: Option<String>,
+    pub is_default_lang: bool,
+
+    /// Canonical identifier for translation linking (language-neutral).
+    #[serde(default)]
+    pub canonical_id: String,
 
     /// Tags for this page.
     #[serde(default)]
@@ -256,6 +274,8 @@ impl Page {
             updated: fm.updated,
             draft: fm.draft,
             lang: content_path.lang.clone(),
+            is_default_lang: content_path.is_default_lang,
+            canonical_id: content_path.canonical_id.clone(),
             tags: fm.tags.clone(),
             categories: fm.categories.clone(),
             content: content.html,
@@ -327,8 +347,10 @@ mod tests {
         let path = Path::new("posts/hello.md");
         let cp = ContentPath::from_path(path, "en").expect("parse path");
 
+        assert_eq!(cp.lang, "en");
+        assert!(cp.is_default_lang);
+        assert_eq!(cp.canonical_id, "posts/hello");
         assert_eq!(cp.slug, "posts/hello");
-        assert_eq!(cp.lang, None);
         assert_eq!(cp.content_type, ContentType::Markdown);
         assert_eq!(cp.url_path(), "/posts/hello");
     }
@@ -338,8 +360,10 @@ mod tests {
         let path = Path::new("posts/hello.zh.md");
         let cp = ContentPath::from_path(path, "en").expect("parse path");
 
-        assert_eq!(cp.slug, "posts/hello");
-        assert_eq!(cp.lang, Some("zh".to_string()));
+        assert_eq!(cp.lang, "zh");
+        assert!(!cp.is_default_lang);
+        assert_eq!(cp.canonical_id, "posts/hello");
+        assert_eq!(cp.slug, "zh/posts/hello");
         assert_eq!(cp.url_path(), "/zh/posts/hello");
     }
 
@@ -348,9 +372,11 @@ mod tests {
         let path = Path::new("posts/hello.en.md");
         let cp = ContentPath::from_path(path, "en").expect("parse path");
 
-        // Default language should not be set explicitly
+        // Default language should still be tracked as default
+        assert_eq!(cp.lang, "en");
+        assert!(cp.is_default_lang);
+        assert_eq!(cp.canonical_id, "posts/hello");
         assert_eq!(cp.slug, "posts/hello");
-        assert_eq!(cp.lang, None);
     }
 
     #[test]
@@ -358,8 +384,10 @@ mod tests {
         let path = Path::new("posts/hello/index.md");
         let cp = ContentPath::from_path(path, "en").expect("parse path");
 
+        assert_eq!(cp.lang, "en");
+        assert!(cp.is_default_lang);
+        assert_eq!(cp.canonical_id, "posts/hello");
         assert_eq!(cp.slug, "posts/hello");
-        assert_eq!(cp.lang, None);
     }
 
     #[test]
@@ -367,8 +395,10 @@ mod tests {
         let path = Path::new("posts/hello/index.zh.md");
         let cp = ContentPath::from_path(path, "en").expect("parse path");
 
-        assert_eq!(cp.slug, "posts/hello");
-        assert_eq!(cp.lang, Some("zh".to_string()));
+        assert_eq!(cp.lang, "zh");
+        assert!(!cp.is_default_lang);
+        assert_eq!(cp.canonical_id, "posts/hello");
+        assert_eq!(cp.slug, "zh/posts/hello");
     }
 
     #[test]
@@ -376,6 +406,9 @@ mod tests {
         let path = Path::new("docs/guide.typ");
         let cp = ContentPath::from_path(path, "en").expect("parse path");
 
+        assert_eq!(cp.lang, "en");
+        assert!(cp.is_default_lang);
+        assert_eq!(cp.canonical_id, "docs/guide");
         assert_eq!(cp.slug, "docs/guide");
         assert_eq!(cp.content_type, ContentType::Typst);
     }

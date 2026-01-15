@@ -1,13 +1,13 @@
 //! Typstify CLI
 //!
 //! Single binary static site generator with Typst/Markdown support.
+//!
+//! This is the binary entry point. The library functionality is in `lib.rs`.
 
 use clap::Parser;
 use color_eyre::eyre::Result;
 
-mod cmd;
-mod server;
-
+/// Command-line interface for Typstify.
 #[derive(Parser)]
 #[command(
     name = "typstify",
@@ -27,6 +27,7 @@ struct Cli {
     command: Commands,
 }
 
+/// Available CLI commands.
 #[derive(clap::Subcommand)]
 enum Commands {
     /// Build the static site for production
@@ -63,41 +64,25 @@ enum Commands {
     },
 }
 
-fn init_tracing(verbose: u8) {
-    use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
-
-    let level = match verbose {
-        0 => tracing::Level::WARN,
-        1 => tracing::Level::INFO,
-        2 => tracing::Level::DEBUG,
-        _ => tracing::Level::TRACE,
-    };
-
-    tracing_subscriber::registry()
-        .with(tracing_subscriber::fmt::layer())
-        .with(tracing_subscriber::EnvFilter::from_default_env().add_directive(level.into()))
-        .init();
-}
-
 #[tokio::main]
 async fn main() -> Result<()> {
     color_eyre::install()?;
 
     let cli = Cli::parse();
-    init_tracing(cli.verbose);
+    typstify::init_tracing(cli.verbose);
 
     match cli.command {
         Commands::Build { output, drafts } => {
-            cmd::build::run(&cli.config, &output, drafts)?;
+            typstify::cmd::build::run(&cli.config, &output, drafts)?;
         }
         Commands::Watch { port, open } => {
-            cmd::watch::run(&cli.config, port, open).await?;
+            typstify::cmd::watch::run(&cli.config, port, open).await?;
         }
         Commands::New { path, template } => {
-            cmd::new::run(&path, &template)?;
+            typstify::cmd::new::run(&path, &template)?;
         }
         Commands::Check { strict } => {
-            cmd::check::run(&cli.config, strict)?;
+            typstify::cmd::check::run(&cli.config, strict)?;
         }
     }
 

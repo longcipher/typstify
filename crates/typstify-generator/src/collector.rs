@@ -44,6 +44,9 @@ pub struct SiteContent {
 
     /// Taxonomy term to page slugs mapping.
     pub taxonomies: TaxonomyIndex,
+
+    /// Translation groups (canonical_id -> [slugs]).
+    pub translations: HashMap<String, Vec<String>>,
 }
 
 /// Index of taxonomy terms.
@@ -136,6 +139,15 @@ impl ContentCollector {
                     .taxonomies
                     .categories
                     .entry(category.clone())
+                    .or_default()
+                    .push(url.clone());
+            }
+
+            // Index translations
+            if !page.canonical_id.is_empty() {
+                content
+                    .translations
+                    .entry(page.canonical_id.clone())
                     .or_default()
                     .push(url.clone());
             }
@@ -288,6 +300,8 @@ pub fn paginate<T>(items: &[T], page: usize, per_page: usize) -> (&[T], usize) {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
+
     use super::*;
 
     #[allow(dead_code)]
@@ -297,16 +311,17 @@ mod tests {
                 title: "Test Site".to_string(),
                 base_url: "https://example.com".to_string(),
                 default_language: "en".to_string(),
-                languages: vec!["en".to_string()],
                 description: None,
                 author: None,
             },
+            languages: HashMap::new(),
             build: typstify_core::config::BuildConfig {
                 drafts: false,
                 ..Default::default()
             },
             search: typstify_core::config::SearchConfig::default(),
             rss: typstify_core::config::RssConfig::default(),
+            robots: typstify_core::config::RobotsConfig::default(),
             taxonomies: typstify_core::config::TaxonomyConfig::default(),
         }
     }
@@ -342,7 +357,7 @@ mod tests {
 
         assert_eq!(index.tags.get("rust").unwrap().len(), 2);
         assert_eq!(index.tags.get("web").unwrap().len(), 1);
-        assert!(index.tags.get("python").is_none());
+        assert!(!index.tags.contains_key("python"));
     }
 
     #[test]

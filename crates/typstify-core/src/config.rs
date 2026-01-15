@@ -1,6 +1,6 @@
 //! Site configuration management.
 
-use std::path::Path;
+use std::{collections::HashMap, path::Path};
 
 use serde::{Deserialize, Serialize};
 
@@ -24,9 +24,17 @@ pub struct Config {
     #[serde(default)]
     pub rss: RssConfig,
 
+    /// Robots.txt settings.
+    #[serde(default)]
+    pub robots: RobotsConfig,
+
     /// Taxonomy settings.
     #[serde(default)]
     pub taxonomies: TaxonomyConfig,
+
+    /// Language-specific configurations.
+    #[serde(default)]
+    pub languages: HashMap<String, LanguageConfig>,
 }
 
 /// Site-wide configuration.
@@ -42,10 +50,6 @@ pub struct SiteConfig {
     #[serde(default = "default_language")]
     pub default_language: String,
 
-    /// List of supported languages.
-    #[serde(default = "default_languages")]
-    pub languages: Vec<String>,
-
     /// Site description for meta tags.
     #[serde(default)]
     pub description: Option<String>,
@@ -53,6 +57,22 @@ pub struct SiteConfig {
     /// Site author name.
     #[serde(default)]
     pub author: Option<String>,
+}
+
+/// Configuration for a specific language.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct LanguageConfig {
+    /// Display name of the language (e.g., "中文", "日本語").
+    #[serde(default)]
+    pub name: Option<String>,
+
+    /// Override site title for this language.
+    #[serde(default)]
+    pub title: Option<String>,
+
+    /// Override site description for this language.
+    #[serde(default)]
+    pub description: Option<String>,
 }
 
 /// Build configuration.
@@ -103,6 +123,22 @@ pub struct RssConfig {
     pub limit: usize,
 }
 
+/// Robots.txt configuration.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RobotsConfig {
+    /// Whether robots.txt generation is enabled.
+    #[serde(default = "default_true")]
+    pub enabled: bool,
+
+    /// Disallowed paths.
+    #[serde(default)]
+    pub disallow: Vec<String>,
+
+    /// Allowed paths.
+    #[serde(default)]
+    pub allow: Vec<String>,
+}
+
 /// Taxonomy configuration.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct TaxonomyConfig {
@@ -126,10 +162,6 @@ pub struct TaxonomySettings {
 // Default value functions
 fn default_language() -> String {
     "en".to_string()
-}
-
-fn default_languages() -> Vec<String> {
-    vec!["en".to_string()]
 }
 
 fn default_output_dir() -> String {
@@ -186,6 +218,16 @@ impl Default for RssConfig {
         Self {
             enabled: true,
             limit: default_rss_limit(),
+        }
+    }
+}
+
+impl Default for RobotsConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            disallow: Vec::new(),
+            allow: Vec::new(),
         }
     }
 }
@@ -256,6 +298,51 @@ impl Config {
         let path = path.trim_start_matches('/');
         format!("{base}/{path}")
     }
+
+    /// Check if a language code is configured (either as default or in languages map).
+    #[must_use]
+    pub fn has_language(&self, lang: &str) -> bool {
+        lang == self.site.default_language || self.languages.contains_key(lang)
+    }
+
+    /// Get all configured language codes.
+    #[must_use]
+    pub fn all_languages(&self) -> Vec<&str> {
+        let mut langs: Vec<&str> = vec![self.site.default_language.as_str()];
+        for lang in self.languages.keys() {
+            if lang != &self.site.default_language {
+                langs.push(lang.as_str());
+            }
+        }
+        langs
+    }
+
+    /// Get language-specific title, falling back to site title.
+    #[must_use]
+    pub fn title_for_language(&self, lang: &str) -> &str {
+        self.languages
+            .get(lang)
+            .and_then(|lc| lc.title.as_deref())
+            .unwrap_or(&self.site.title)
+    }
+
+    /// Get language-specific description, falling back to site description.
+    #[must_use]
+    pub fn description_for_language(&self, lang: &str) -> Option<&str> {
+        self.languages
+            .get(lang)
+            .and_then(|lc| lc.description.as_deref())
+            .or(self.site.description.as_deref())
+    }
+
+    /// Get display name for a language code.
+    #[must_use]
+    pub fn language_name<'a>(&'a self, lang: &'a str) -> &'a str {
+        self.languages
+            .get(lang)
+            .and_then(|lc| lc.name.as_deref())
+            .unwrap_or(lang)
+    }
 }
 
 #[cfg(test)]
@@ -270,7 +357,11 @@ mod tests {
 title = "Test Site"
 base_url = "https://example.com"
 default_language = "en"
-languages = ["en", "zh"]
+
+[languages.zh]
+name = "中文"
+title = "测试站点"
+description = "一个测试站点"
 
 [build]
 output_dir = "dist"
@@ -303,7 +394,12 @@ paginate = 20
         assert_eq!(config.site.title, "Test Site");
         assert_eq!(config.site.base_url, "https://example.com");
         assert_eq!(config.site.default_language, "en");
-        assert_eq!(config.site.languages, vec!["en", "zh"]);
+        assert!(config.has_language("en"));
+        assert!(config.has_language("zh"));
+        assert!(!config.has_language("ja"));
+        assert_eq!(config.title_for_language("zh"), "测试站点");
+        assert_eq!(config.title_for_language("en"), "Test Site");
+        assert_eq!(config.language_name("zh"), "中文");
         assert_eq!(config.build.output_dir, "dist");
         assert!(config.build.minify);
         assert_eq!(config.build.syntax_theme, "OneHalfDark");

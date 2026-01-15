@@ -84,21 +84,59 @@ async fn livereload_handler(
 pub const LIVERELOAD_SCRIPT: &str = r#"
 <script>
 (function() {
-    const source = new EventSource('/__livereload');
-    source.onmessage = function(event) {
-        if (event.data === 'reload') {
-            window.location.reload();
-        } else if (event.data === 'css-reload') {
-            // Reload all CSS files
-            document.querySelectorAll('link[rel="stylesheet"]').forEach(function(link) {
-                const href = link.href.split('?')[0];
-                link.href = href + '?v=' + Date.now();
-            });
+    // Prevent duplicate connections
+    if (window.__livereloadActive) return;
+    window.__livereloadActive = true;
+
+    let source = null;
+    let reconnectTimer = null;
+
+    function connect() {
+        if (source && source.readyState !== EventSource.CLOSED) {
+            return;
         }
-    };
-    source.onerror = function() {
-        console.log('[livereload] Connection lost, retrying...');
-    };
+        source = new EventSource('/__livereload');
+        source.onmessage = function(event) {
+            if (event.data === 'reload') {
+                cleanup();
+                window.location.reload();
+            } else if (event.data === 'css-reload') {
+                document.querySelectorAll('link[rel="stylesheet"]').forEach(function(link) {
+                    const href = link.href.split('?')[0];
+                    link.href = href + '?v=' + Date.now();
+                });
+            }
+        };
+        source.onerror = function() {
+            console.log('[livereload] Connection lost, will retry...');
+            source.close();
+            clearTimeout(reconnectTimer);
+            reconnectTimer = setTimeout(connect, 2000);
+        };
+    }
+
+    function cleanup() {
+        clearTimeout(reconnectTimer);
+        if (source) {
+            source.close();
+            source = null;
+        }
+    }
+
+    // Handle page visibility to save resources
+    document.addEventListener('visibilitychange', function() {
+        if (document.hidden) {
+            cleanup();
+        } else {
+            connect();
+        }
+    });
+
+    // Clean up on page unload
+    window.addEventListener('beforeunload', cleanup);
+    window.addEventListener('pagehide', cleanup);
+
+    connect();
 })();
 </script>
 "#;

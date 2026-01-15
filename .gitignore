@@ -163,3 +163,4 @@ Cargo.lock
 
 examples/blog/public
 .rumdl_cache/
+.playwright-mcp/

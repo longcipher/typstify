@@ -21,7 +21,7 @@ run *ARGS:
 format:
   rumdl fmt .
   taplo fmt
-  leptosfmt .
+  leptosfmt crates/
   cargo +nightly fmt --all
 fix:
   rumdl check --fix .
@@ -29,7 +29,7 @@ lint:
   rumdl check .
   taplo fmt --check
   cargo +nightly fmt --all -- --check
-  leptosfmt . --check
+  leptosfmt crates/ --check
   cargo +nightly clippy --all -- -D warnings -A clippy::derive_partial_eq_without_eq -D clippy::unwrap_used -D clippy::uninlined_format_args
   cargo machete
 test:

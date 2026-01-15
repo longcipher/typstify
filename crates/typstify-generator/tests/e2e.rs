@@ -19,7 +19,8 @@ fn test_sample_site_config_loads() {
     assert_eq!(config.site.title, "My Typstify Blog");
     assert_eq!(config.site.base_url, "https://example.com");
     assert_eq!(config.site.default_language, "en");
-    assert_eq!(config.site.languages, vec!["en", "zh"]);
+    assert!(config.has_language("en"));
+    assert!(config.has_language("zh"));
 }
 
 #[test]
@@ -56,7 +57,8 @@ fn test_sample_site_typst_parses() {
 fn test_sample_site_chinese_content() {
     let registry = ParserRegistry::new();
 
-    let zh_path = Path::new("../../examples/blog/content/posts.zh/hello-world.md");
+    // Using filename-based i18n: hello-world.zh.md instead of posts.zh/hello-world.md
+    let zh_path = Path::new("../../examples/blog/content/posts/hello-world.zh.md");
     if !zh_path.exists() {
         return;
     }

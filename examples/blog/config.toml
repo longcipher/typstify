@@ -6,8 +6,16 @@ title = "My Typstify Blog"
 description = "A sample blog built with Typstify"
 base_url = "https://example.com"
 default_language = "en"
-languages = ["en", "zh"]
 author = "Typstify Team"
+
+# Language-specific overrides
+[languages.en]
+name = "English"
+
+[languages.zh]
+name = "中文"
+title = "我的 Typstify 博客"
+description = "使用 Typstify 构建的示例博客"
 
 [build]
 output_dir = "public"

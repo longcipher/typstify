@@ -148,6 +148,13 @@ impl TemplateRegistry {
         self.register(Template::new("list", DEFAULT_LIST_TEMPLATE));
         self.register(Template::new("taxonomy", DEFAULT_TAXONOMY_TEMPLATE));
         self.register(Template::new("redirect", DEFAULT_REDIRECT_TEMPLATE));
+        self.register(Template::new("tags_index", DEFAULT_TAGS_INDEX_TEMPLATE));
+        self.register(Template::new(
+            "categories_index",
+            DEFAULT_CATEGORIES_INDEX_TEMPLATE,
+        ));
+        self.register(Template::new("archives", DEFAULT_ARCHIVES_TEMPLATE));
+        self.register(Template::new("section", DEFAULT_SECTION_TEMPLATE));
     }
 
     /// Register a template.
@@ -171,6 +178,7 @@ impl TemplateRegistry {
 }
 
 /// Default base HTML template.
+/// Uses external CSS and JS files for better caching and smaller HTML files.
 pub const DEFAULT_BASE_TEMPLATE: &str = r##"<!DOCTYPE html>
 <html lang="{{ lang }}" class="scroll-smooth">
 <head>
@@ -180,464 +188,51 @@ pub const DEFAULT_BASE_TEMPLATE: &str = r##"<!DOCTYPE html>
     <meta name="description" content="{{ description? }}">
     <meta name="author" content="{{ author? }}">
     <link rel="canonical" href="{{ canonical_url }}">
+    {{ hreflang? }}
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/style.css">
     {{ custom_css? }}
-    <style>
-        /* CSS Variables for Light/Dark Themes */
-        :root {
-            --color-primary: #3B82F6;
-            --color-primary-hover: #2563EB;
-            --color-secondary: #60A5FA;
-            --color-cta: #F97316;
-            --color-cta-hover: #EA580C;
-            --color-bg: #F8FAFC;
-            --color-bg-secondary: #FFFFFF;
-            --color-text: #1E293B;
-            --color-text-secondary: #475569;
-            --color-text-muted: #64748B;
-            --color-border: #E2E8F0;
-            --color-code-bg: #F1F5F9;
-            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-            color-scheme: light;
-        }
-
-        [data-theme="dark"] {
-            --color-primary: #60A5FA;
-            --color-primary-hover: #93C5FD;
-            --color-secondary: #3B82F6;
-            --color-cta: #FB923C;
-            --color-cta-hover: #FDBA74;
-            --color-bg: #0F172A;
-            --color-bg-secondary: #1E293B;
-            --color-text: #F1F5F9;
-            --color-text-secondary: #CBD5E1;
-            --color-text-muted: #94A3B8;
-            --color-border: #334155;
-            --color-code-bg: #1E293B;
-            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
-            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.3);
-            color-scheme: dark;
-        }
-
-        @media (prefers-color-scheme: dark) {
-            :root:not([data-theme="light"]) {
-                --color-primary: #60A5FA;
-                --color-primary-hover: #93C5FD;
-                --color-secondary: #3B82F6;
-                --color-cta: #FB923C;
-                --color-cta-hover: #FDBA74;
-                --color-bg: #0F172A;
-                --color-bg-secondary: #1E293B;
-                --color-text: #F1F5F9;
-                --color-text-secondary: #CBD5E1;
-                --color-text-muted: #94A3B8;
-                --color-border: #334155;
-                --color-code-bg: #1E293B;
-                --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
-                --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.3);
-                color-scheme: dark;
-            }
-        }
-
-        /* Reset & Base */
-        *, *::before, *::after { box-sizing: border-box; }
-        * { margin: 0; padding: 0; }
-
-        html {
-            font-size: 16px;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-        }
-
-        body {
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
-            font-weight: 400;
-            line-height: 1.7;
-            color: var(--color-text);
-            background-color: var(--color-bg);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            transition: background-color 0.2s ease, color 0.2s ease;
-        }
-
-        /* Layout */
-        .container {
-            width: 100%;
-            max-width: 720px;
-            margin: 0 auto;
-            padding: 0 1.5rem;
-        }
-
-        /* Header */
-        header {
-            position: sticky;
-            top: 0;
-            z-index: 50;
-            background-color: var(--color-bg);
-            border-bottom: 1px solid var(--color-border);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
-            background-color: rgba(248, 250, 252, 0.9);
-        }
-
-        [data-theme="dark"] header {
-            background-color: rgba(15, 23, 42, 0.9);
-        }
-
-        @media (prefers-color-scheme: dark) {
-            :root:not([data-theme="light"]) header {
-                background-color: rgba(15, 23, 42, 0.9);
-            }
-        }
-
-        header nav {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 1rem 0;
-        }
-
-        .site-title {
-            font-size: 1.125rem;
-            font-weight: 600;
-            color: var(--color-text);
-            text-decoration: none;
-            letter-spacing: -0.025em;
-            transition: color 0.2s ease;
-        }
-
-        .site-title:hover {
-            color: var(--color-primary);
-        }
-
-        .nav-links {
-            display: flex;
-            align-items: center;
-            gap: 1.5rem;
-        }
-
-        .nav-links a {
-            font-size: 0.875rem;
-            font-weight: 500;
-            color: var(--color-text-secondary);
-            text-decoration: none;
-            transition: color 0.2s ease;
-        }
-
-        .nav-links a:hover {
-            color: var(--color-primary);
-        }
-
-        /* Theme Toggle Button */
-        .theme-toggle {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 2.25rem;
-            height: 2.25rem;
-            border-radius: 0.5rem;
-            border: 1px solid var(--color-border);
-            background-color: var(--color-bg-secondary);
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .theme-toggle:hover {
-            border-color: var(--color-primary);
-            background-color: var(--color-bg);
-        }
-
-        .theme-toggle svg {
-            width: 1.125rem;
-            height: 1.125rem;
-            color: var(--color-text-secondary);
-        }
-
-        .theme-toggle .icon-sun { display: none; }
-        .theme-toggle .icon-moon { display: block; }
-
-        [data-theme="dark"] .theme-toggle .icon-sun { display: block; }
-        [data-theme="dark"] .theme-toggle .icon-moon { display: none; }
-
-        @media (prefers-color-scheme: dark) {
-            :root:not([data-theme="light"]) .theme-toggle .icon-sun { display: block; }
-            :root:not([data-theme="light"]) .theme-toggle .icon-moon { display: none; }
-        }
-
-        /* Main Content */
-        main {
-            flex: 1;
-            padding: 3rem 0;
-        }
-
-        /* Typography */
-        h1, h2, h3, h4, h5, h6 {
-            font-weight: 600;
-            line-height: 1.3;
-            letter-spacing: -0.025em;
-            color: var(--color-text);
-        }
-
-        h1 { font-size: 2rem; margin-bottom: 1rem; }
-        h2 { font-size: 1.5rem; margin: 2rem 0 0.75rem; }
-        h3 { font-size: 1.25rem; margin: 1.5rem 0 0.5rem; }
-        h4 { font-size: 1.125rem; margin: 1.25rem 0 0.5rem; }
-
-        p { margin-bottom: 1.25rem; }
-
-        a {
-            color: var(--color-primary);
-            text-decoration: none;
-            transition: color 0.15s ease;
-        }
-
-        a:hover {
-            color: var(--color-primary-hover);
-            text-decoration: underline;
-        }
-
-        /* Lists */
-        ul, ol {
-            padding-left: 1.5rem;
-            margin-bottom: 1.25rem;
-        }
-
-        li { margin-bottom: 0.375rem; }
-        li::marker { color: var(--color-text-muted); }
-
-        /* Code */
-        code {
-            font-family: 'SF Mono', ui-monospace, 'Cascadia Code', Menlo, Consolas, monospace;
-            font-size: 0.875em;
-            background-color: var(--color-code-bg);
-            padding: 0.125rem 0.375rem;
-            border-radius: 0.25rem;
-        }
-
-        pre {
-            background-color: var(--color-code-bg);
-            padding: 1rem;
-            border-radius: 0.5rem;
-            overflow-x: auto;
-            margin-bottom: 1.5rem;
-            border: 1px solid var(--color-border);
-        }
-
-        pre code {
-            background: none;
-            padding: 0;
-            font-size: 0.8125rem;
-            line-height: 1.6;
-        }
-
-        /* Blockquote */
-        blockquote {
-            border-left: 3px solid var(--color-primary);
-            padding-left: 1rem;
-            margin: 1.5rem 0;
-            color: var(--color-text-secondary);
-            font-style: italic;
-        }
-
-        /* Images */
-        img {
-            max-width: 100%;
-            height: auto;
-            border-radius: 0.5rem;
-        }
-
-        /* Tables */
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 1.5rem 0;
-            font-size: 0.875rem;
-        }
-
-        th, td {
-            padding: 0.75rem;
-            text-align: left;
-            border-bottom: 1px solid var(--color-border);
-        }
-
-        th {
-            font-weight: 600;
-            background-color: var(--color-bg-secondary);
-        }
-
-        /* Horizontal Rule */
-        hr {
-            border: none;
-            border-top: 1px solid var(--color-border);
-            margin: 2rem 0;
-        }
-
-        /* Footer */
-        footer {
-            border-top: 1px solid var(--color-border);
-            padding: 2rem 0;
-            margin-top: auto;
-        }
-
-        footer p {
-            font-size: 0.875rem;
-            color: var(--color-text-muted);
-            text-align: center;
-            margin: 0;
-        }
-
-        /* Article Styles */
-        article header {
-            position: static;
-            background: none;
-            border: none;
-            backdrop-filter: none;
-            padding: 0;
-            margin-bottom: 2rem;
-        }
-
-        article header h1 {
-            margin-bottom: 0.75rem;
-        }
-
-        article time {
-            display: block;
-            font-size: 0.875rem;
-            color: var(--color-text-muted);
-            margin-bottom: 0.5rem;
-        }
-
-        /* Tags */
-        .tags {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.5rem;
-            margin-top: 0.75rem;
-        }
-
-        .tags a {
-            display: inline-flex;
-            align-items: center;
-            padding: 0.25rem 0.75rem;
-            font-size: 0.75rem;
-            font-weight: 500;
-            color: var(--color-primary);
-            background-color: var(--color-code-bg);
-            border-radius: 9999px;
-            text-decoration: none;
-            transition: all 0.15s ease;
-        }
-
-        .tags a:hover {
-            background-color: var(--color-primary);
-            color: white;
-            text-decoration: none;
-        }
-
-        /* Post List */
-        .post-list ul {
-            list-style: none;
-            padding: 0;
-        }
-
-        .post-list li {
-            display: flex;
-            justify-content: space-between;
-            align-items: baseline;
-            gap: 1rem;
-            padding: 1rem 0;
-            border-bottom: 1px solid var(--color-border);
-        }
-
-        .post-list li:first-child {
-            padding-top: 0;
-        }
-
-        .post-list li a {
-            font-weight: 500;
-            color: var(--color-text);
-            text-decoration: none;
-            transition: color 0.15s ease;
-        }
-
-        .post-list li a:hover {
-            color: var(--color-primary);
-        }
-
-        .post-list time {
-            flex-shrink: 0;
-            font-size: 0.8125rem;
-            color: var(--color-text-muted);
-            font-variant-numeric: tabular-nums;
-        }
-
-        /* Pagination */
-        .pagination {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 1rem;
-            margin-top: 2rem;
-            font-size: 0.875rem;
-        }
-
-        .pagination a {
-            font-weight: 500;
-        }
-
-        /* Taxonomy */
-        .taxonomy h1 {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .taxonomy h1 span {
-            color: var(--color-text-muted);
-            font-weight: 400;
-        }
-
-        /* Responsive */
-        @media (max-width: 640px) {
-            html { font-size: 15px; }
-            h1 { font-size: 1.75rem; }
-            h2 { font-size: 1.375rem; }
-            .container { padding: 0 1rem; }
-            main { padding: 2rem 0; }
-            .nav-links { gap: 1rem; }
-            .post-list li { flex-direction: column; gap: 0.25rem; }
-        }
-
-        /* Reduced Motion */
-        @media (prefers-reduced-motion: reduce) {
-            *, *::before, *::after {
-                animation-duration: 0.01ms !important;
-                animation-iteration-count: 1 !important;
-                transition-duration: 0.01ms !important;
-            }
-        }
-    </style>
+    <script>
+        // Inline critical JS to prevent FOUC (Flash of Unstyled Content)
+        (function() {
+            const saved = localStorage.getItem('theme');
+            const theme = saved || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
 </head>
 <body>
     <header>
         <div class="container">
             <nav>
-                <a href="/" class="site-title">{{ site_title }}</a>
+                <a href="{{ nav_home_url }}" class="site-title">{{ site_title }}</a>
                 <div class="nav-links">
-                    <a href="/about">About</a>
-                    <a href="/tags">Tags</a>
-                    <button class="theme-toggle" aria-label="Toggle theme" type="button">
-                        <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                        </svg>
-                        <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                        </svg>
-                    </button>
+                    <a href="{{ nav_posts_url }}">Posts</a>
+                    <a href="{{ nav_archives_url }}">Archives</a>
+                    <a href="{{ nav_tags_url }}">Tags</a>
+                    <a href="{{ nav_about_url }}">About</a>
+                    <div class="nav-actions">
+                        <div class="search-wrapper" id="searchWrapper">
+                            <input type="text" class="search-input" id="searchInput" placeholder="Search..." autocomplete="off">
+                            <button class="search-btn" id="searchBtn" aria-label="Search" type="button">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                                </svg>
+                            </button>
+                            <div class="search-results" id="searchResults"></div>
+                        </div>
+                        {{ lang_switcher? }}
+                        <button class="theme-toggle" aria-label="Toggle theme" type="button">
+                            <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                            </svg>
+                            <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                            </svg>
+                        </button>
+                    </div>
                 </div>
             </nav>
         </div>
@@ -652,41 +247,7 @@ pub const DEFAULT_BASE_TEMPLATE: &str = r##"<!DOCTYPE html>
             <p>&copy; {{ year }} {{ site_title }}. Built with <a href="https://github.com/longcipher/typstify">Typstify</a>.</p>
         </div>
     </footer>
-    <script>
-        (function() {
-            const toggle = document.querySelector('.theme-toggle');
-            const html = document.documentElement;
-
-            // Get saved theme or use system preference
-            function getTheme() {
-                const saved = localStorage.getItem('theme');
-                if (saved) return saved;
-                return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-            }
-
-            // Apply theme
-            function setTheme(theme) {
-                html.setAttribute('data-theme', theme);
-                localStorage.setItem('theme', theme);
-            }
-
-            // Initialize
-            setTheme(getTheme());
-
-            // Toggle on click
-            toggle.addEventListener('click', () => {
-                const current = html.getAttribute('data-theme') || getTheme();
-                setTheme(current === 'dark' ? 'light' : 'dark');
-            });
-
-            // Listen for system changes
-            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
-                if (!localStorage.getItem('theme')) {
-                    setTheme(e.matches ? 'dark' : 'light');
-                }
-            });
-        })();
-    </script>
+    <script src="/assets/main.js" defer></script>
     {{ custom_js? }}
 </body>
 </html>"##;
@@ -742,6 +303,38 @@ pub const DEFAULT_REDIRECT_TEMPLATE: &str = r#"<!DOCTYPE html>
     <p>Redirecting to <a href="{{ redirect_url }}">{{ redirect_url }}</a></p>
 </body>
 </html>"#;
+
+/// Default tags index template (lists all tags with counts).
+pub const DEFAULT_TAGS_INDEX_TEMPLATE: &str = r#"<section class="taxonomy-index">
+    <h1>Tags</h1>
+    <div class="tags-cloud">
+        {{ items }}
+    </div>
+</section>"#;
+
+/// Default categories index template (lists all categories with counts).
+pub const DEFAULT_CATEGORIES_INDEX_TEMPLATE: &str = r#"<section class="taxonomy-index">
+    <h1>Categories</h1>
+    <ul class="categories-list">
+        {{ items }}
+    </ul>
+</section>"#;
+
+/// Default archives template (lists all posts grouped by year).
+pub const DEFAULT_ARCHIVES_TEMPLATE: &str = r#"<section class="archives">
+    <h1>Archives</h1>
+    {{ items }}
+</section>"#;
+
+/// Default section template (lists all posts in a section).
+pub const DEFAULT_SECTION_TEMPLATE: &str = r#"<section class="section-list post-list">
+    <h1>{{ title }}</h1>
+    <p class="section-description">{{ description? }}</p>
+    <ul>
+        {{ items }}
+    </ul>
+    <div class="pagination">{{ pagination? }}</div>
+</section>"#;
 
 #[cfg(test)]
 mod tests {
@@ -814,7 +407,13 @@ mod tests {
             .with_var("canonical_url", "https://example.com/my-page")
             .with_var("content", "<p>Hello!</p>")
             .with_var("site_title", "My Site")
-            .with_var("year", "2026");
+            .with_var("year", "2026")
+            // Navigation URLs
+            .with_var("nav_home_url", "/")
+            .with_var("nav_posts_url", "/posts")
+            .with_var("nav_archives_url", "/archives")
+            .with_var("nav_tags_url", "/tags")
+            .with_var("nav_about_url", "/about");
 
         let result = registry.render("base", &ctx).unwrap();
         assert!(result.contains("<!DOCTYPE html>"));

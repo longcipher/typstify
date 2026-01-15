@@ -6,6 +6,8 @@ use color_eyre::eyre::{Result, WrapErr};
 use typstify_core::Config;
 use typstify_generator::Builder;
 
+use super::check::quick_validate;
+
 /// Run the build command.
 ///
 /// Builds the static site from content files to the output directory.
@@ -15,6 +17,17 @@ pub fn run(config_path: &Path, output: &Path, drafts: bool) -> Result<()> {
 
     // Load configuration
     let mut config = Config::load(config_path).wrap_err("Failed to load configuration")?;
+
+    // Quick validation - print warnings for missing language files
+    let warnings = quick_validate(&config);
+    if !warnings.is_empty() {
+        println!();
+        println!("  Warnings:");
+        for warn in &warnings {
+            println!("  ⚠ {warn}");
+        }
+        println!();
+    }
 
     // Override output directory if specified
     config.build.output_dir = output.to_string_lossy().to_string();
@@ -37,6 +50,7 @@ pub fn run(config_path: &Path, output: &Path, drafts: bool) -> Result<()> {
     println!();
     println!("  Pages:      {}", stats.pages);
     println!("  Taxonomies: {}", stats.taxonomy_pages);
+    println!("  Auto Pages: {}", stats.auto_pages);
     println!("  Redirects:  {}", stats.redirects);
     println!("  Assets:     {}", stats.assets);
     println!();

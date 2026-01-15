@@ -262,25 +262,42 @@ $ integral_0^infinity e^(-x^2) dif x = sqrt(pi) / 2 $
 
 ## Multi-Language Content
 
-### Directory Structure
+### Filename-Based Language Detection
+
+Typstify uses Zola-style filename suffixes for multi-language content:
 
 ```text
 content/
-├── posts/              # Default language (en)
-│   ├── hello.md
-│   └── guide.md
-├── posts.zh/           # Chinese translations
-│   ├── hello.md
-│   └── guide.md
-└── posts.ja/           # Japanese translations
-    └── hello.md
+├── posts/
+│   ├── hello.md           # Default language (en)
+│   ├── hello.zh.md        # Chinese translation
+│   ├── hello.ja.md        # Japanese translation
+│   ├── guide.md           # Default language (en)
+│   └── guide.zh.md        # Chinese translation
+└── about.md               # Default language (en)
 ```
 
-### Language Detection
+### Language Detection Rules
 
-- Files in `posts/` → default language
-- Files in `posts.{lang}/` → specified language
-- The slug determines which posts are translations of each other
+- Files without language suffix (e.g., `hello.md`) → default language
+- Files with `.{lang}.md` suffix (e.g., `hello.zh.md`) → specified language
+- The base filename (before the language suffix) determines translation linking
+- Translations share the same `canonical_id` for SEO and navigation
+
+### Configuration
+
+```toml
+[site]
+default_language = "en"
+
+[languages.en]
+name = "English"
+
+[languages.zh]
+name = "中文"
+title = "我的博客"      # Override site title for this language
+description = "中文描述"
+```
 
 ### Alternate Links
 

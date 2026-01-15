@@ -39,14 +39,15 @@ Typstify generates redirect HTML files automatically.
 
 ## Multi-Language Support
 
-### Directory Structure
+### Filename-Based i18n
+
+Typstify uses filename suffixes for multi-language content:
 
 ```text
 content/
 ├── posts/
-│   └── hello.md        # Default language (en)
-├── posts.zh/
-│   └── hello.md        # Chinese version
+│   ├── hello.md        # Default language (en)
+│   └── hello.zh.md     # Chinese version
 ```
 
 ### Language-Specific Config
@@ -54,7 +55,13 @@ content/
 ```toml
 [site]
 default_language = "en"
-languages = ["en", "zh"]
+
+[languages.en]
+name = "English"
+
+[languages.zh]
+name = "中文"
+title = "我的博客"
 ```
 
 ## Custom Assets

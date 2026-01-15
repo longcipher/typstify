@@ -10,8 +10,9 @@ use color_eyre::eyre::{Result, WrapErr};
 use notify::{EventKind, RecommendedWatcher, RecursiveMode, Watcher, event::ModifyKind};
 use tokio::{net::TcpListener, sync::mpsc};
 use typstify_core::Config;
-use typstify_generator::Builder;
+use typstify_generator::{BuildStats, Builder};
 
+use super::check::quick_validate;
 use crate::server::{LIVERELOAD_SCRIPT, ServerState, create_router};
 
 /// Debounce interval for file changes.
@@ -26,6 +27,17 @@ pub async fn run(config_path: &Path, port: u16, open_browser: bool) -> Result<()
     // Load configuration
     let mut config = Config::load(config_path).wrap_err("Failed to load configuration")?;
 
+    // Quick validation - print warnings for missing language files
+    let warnings = quick_validate(&config);
+    if !warnings.is_empty() {
+        println!();
+        println!("  Warnings:");
+        for warn in &warnings {
+            println!("  ⚠ {warn}");
+        }
+        println!();
+    }
+
     // Enable drafts in development mode
     config.build.drafts = true;
 
@@ -35,8 +47,8 @@ pub async fn run(config_path: &Path, port: u16, open_browser: bool) -> Result<()
     // Initial build
     tracing::info!("Running initial build...");
     let builder = Builder::new(config.clone(), &content_dir_path, &output_dir);
-    inject_livereload_and_build(&builder, &output_dir)?;
-    println!("  Initial build complete");
+    let stats = inject_livereload_and_build(&builder, &output_dir)?;
+    print_build_stats(&stats);
 
     // Create server state
     let state = Arc::new(ServerState::new());
@@ -105,17 +117,22 @@ pub async fn run(config_path: &Path, port: u16, open_browser: bool) -> Result<()
             // Drain any queued events
             while rx.try_recv().is_ok() {}
 
-            tracing::info!("File change detected, rebuilding...");
+            println!();
+            println!("  File change detected, rebuilding...");
             let builder = Builder::new(rebuild_config.clone(), &rebuild_content, &rebuild_output);
 
             match inject_livereload_and_build(&builder, &rebuild_output) {
-                Ok(_) => {
-                    println!("  Rebuild complete");
+                Ok(stats) => {
+                    println!(
+                        "  ✓ Rebuilt {} pages in {}ms",
+                        stats.pages + stats.taxonomy_pages + stats.auto_pages,
+                        stats.duration_ms
+                    );
                     rebuild_state.notify_reload();
                 }
                 Err(e) => {
                     tracing::error!("Rebuild failed: {e}");
-                    eprintln!("  Rebuild failed: {e}");
+                    eprintln!("  ✗ Rebuild failed: {e}");
                 }
             }
 
@@ -148,15 +165,33 @@ pub async fn run(config_path: &Path, port: u16, open_browser: bool) -> Result<()
     Ok(())
 }
 
+/// Print build statistics in a user-friendly format.
+fn print_build_stats(stats: &BuildStats) {
+    let total_pages = stats.pages + stats.taxonomy_pages + stats.auto_pages;
+
+    println!();
+    println!("  Build Statistics:");
+    println!("  ─────────────────────────────────");
+    println!("  Pages:        {:>6}", stats.pages);
+    println!("  Taxonomies:   {:>6}", stats.taxonomy_pages);
+    println!("  Auto Pages:   {:>6}", stats.auto_pages);
+    println!("  Redirects:    {:>6}", stats.redirects);
+    println!("  Assets:       {:>6}", stats.assets);
+    println!("  ─────────────────────────────────");
+    println!("  Total:        {total_pages:>6} pages");
+    println!("  Duration:     {:>6}ms", stats.duration_ms);
+    println!();
+}
+
 /// Build and inject livereload script into HTML files.
-fn inject_livereload_and_build(builder: &Builder, output_dir: &Path) -> Result<()> {
+fn inject_livereload_and_build(builder: &Builder, output_dir: &Path) -> Result<BuildStats> {
     let stats = builder.build().wrap_err("Build failed")?;
 
     // Inject livereload script into all HTML files
     inject_livereload_into_html(output_dir)?;
 
     tracing::debug!(?stats, "Build completed");
-    Ok(())
+    Ok(stats)
 }
 
 /// Inject livereload script into all HTML files in the output directory.

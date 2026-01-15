@@ -266,7 +266,12 @@ fn tag_to_html_start(tag: &Tag) -> String {
             } else {
                 format!(" title=\"{}\"", html_escape(title))
             };
-            format!("<img src=\"{}\"{}", html_escape(dest_url), title_attr)
+            // Add loading="lazy" and decoding="async" for performance
+            format!(
+                "<img src=\"{}\" loading=\"lazy\" decoding=\"async\"{}",
+                html_escape(dest_url),
+                title_attr
+            )
         }
         Tag::HtmlBlock => String::new(),
         Tag::MetadataBlock(_) => String::new(),

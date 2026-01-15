@@ -11,12 +11,14 @@ use std::{
 use rayon::prelude::*;
 use thiserror::Error;
 use tracing::{debug, info, warn};
-use typstify_core::Config;
+use typstify_core::{Config, Page};
+use typstify_search::SimpleSearchIndex;
 
 use crate::{
     assets::{AssetError, AssetManifest, AssetProcessor},
-    collector::{CollectorError, ContentCollector, SiteContent},
+    collector::{CollectorError, ContentCollector, SiteContent, paginate},
     html::{HtmlError, HtmlGenerator, list_item_html, pagination_html},
+    robots::{RobotsError, RobotsGenerator},
     rss::{RssError, RssGenerator},
     sitemap::{SitemapError, SitemapGenerator},
 };
@@ -44,6 +46,10 @@ pub enum BuildError {
     #[error("sitemap error: {0}")]
     Sitemap(#[from] SitemapError),
 
+    /// Robots generation error.
+    #[error("robots error: {0}")]
+    Robots(#[from] RobotsError),
+
     /// Asset error.
     #[error("asset error: {0}")]
     Asset(#[from] AssetError),
@@ -67,6 +73,9 @@ pub struct BuildStats {
 
     /// Number of redirect pages generated.
     pub redirects: usize,
+
+    /// Number of auto-generated index pages (archives, tags index, section indices).
+    pub auto_pages: usize,
 
     /// Number of assets processed.
     pub assets: usize,
@@ -131,18 +140,33 @@ impl Builder {
         // 4. Generate taxonomy pages
         stats.taxonomy_pages = self.generate_taxonomy_pages(&content)?;
 
-        // 5. Generate redirects
+        // 5. Generate auto-generated index pages (archives, tags index, section indices)
+        stats.auto_pages = self.generate_auto_pages(&content)?;
+
+        // 6. Generate redirects
         stats.redirects = self.generate_redirects(&content)?;
 
-        // 6. Generate RSS feed
+        // 7. Generate RSS feed
         if self.config.rss.enabled {
             self.generate_rss(&content)?;
         }
 
-        // 7. Generate sitemap
+        // 8. Generate sitemap
         self.generate_sitemap(&content)?;
 
-        // 8. Process assets
+        // 9. Generate robots.txt
+        self.generate_robots()?;
+
+        // 10. Generate search index (per language)
+        if self.config.search.enabled {
+            self.generate_search_indexes(&content)?;
+        }
+
+        // 11. Generate static CSS/JS assets for better caching
+        crate::static_assets::generate_static_assets(&self.output_dir)
+            .map_err(|e| BuildError::Io(std::io::Error::other(e.to_string())))?;
+
+        // 12. Process user-provided assets
         if let Some(ref static_dir) = self.static_dir {
             let manifest = self.process_assets(static_dir)?;
             stats.assets = manifest.assets().len();
@@ -153,6 +177,7 @@ impl Builder {
         info!(
             pages = stats.pages,
             taxonomy_pages = stats.taxonomy_pages,
+            auto_pages = stats.auto_pages,
             redirects = stats.redirects,
             assets = stats.assets,
             duration_ms = stats.duration_ms,
@@ -183,7 +208,17 @@ impl Builder {
         let results: Vec<_> = pages
             .par_iter()
             .map(|page| {
-                let html = generator.generate_page(page)?;
+                // Collect alternate language versions
+                let mut alternates = Vec::new();
+                if let Some(slugs) = content.translations.get(&page.canonical_id) {
+                    for slug in slugs {
+                        if let Some(alt_page) = content.pages.get(slug) {
+                            alternates.push((alt_page.lang.as_str(), alt_page.url.as_str()));
+                        }
+                    }
+                }
+
+                let html = generator.generate_page(page, &alternates)?;
                 let output_path = generator.output_path(page, &self.output_dir);
 
                 // Write HTML file
@@ -294,6 +329,197 @@ impl Builder {
         Ok(count)
     }
 
+    /// Generate auto-generated index pages: archives, tags index, categories index, section indices.
+    /// Generates per-language versions when multiple languages are configured.
+    fn generate_auto_pages(&self, content: &SiteContent) -> Result<usize> {
+        let generator = HtmlGenerator::new(self.config.clone());
+        let mut count = 0;
+
+        // Get all languages
+        let all_languages = self.config.all_languages();
+        let default_lang = &self.config.site.default_language;
+
+        // Generate pages for each language
+        for lang in &all_languages {
+            let is_default = *lang == default_lang.as_str();
+            let lang_prefix = if is_default {
+                String::new()
+            } else {
+                lang.to_string()
+            };
+
+            // Filter pages by language
+            let lang_pages: Vec<_> = content.pages.values().filter(|p| p.lang == *lang).collect();
+
+            // 1. Generate tags index page (/tags/ or /{lang}/tags/)
+            let lang_tags: std::collections::HashMap<String, Vec<String>> = lang_pages
+                .iter()
+                .flat_map(|p| p.tags.iter().map(|t| (t.clone(), p.url.clone())))
+                .fold(std::collections::HashMap::new(), |mut acc, (tag, url)| {
+                    acc.entry(tag).or_default().push(url);
+                    acc
+                });
+
+            if !lang_tags.is_empty() {
+                let html = generator.generate_tags_index_page(&lang_tags, lang)?;
+                let output_path = if is_default {
+                    self.output_dir.join("tags").join("index.html")
+                } else {
+                    self.output_dir
+                        .join(&lang_prefix)
+                        .join("tags")
+                        .join("index.html")
+                };
+                if let Some(parent) = output_path.parent() {
+                    fs::create_dir_all(parent)?;
+                }
+                fs::write(&output_path, &html)?;
+                count += 1;
+                info!(path = %output_path.display(), lang = lang, "generated tags index page");
+            }
+
+            // 2. Generate categories index page (/categories/ or /{lang}/categories/)
+            let lang_categories: std::collections::HashMap<String, Vec<String>> = lang_pages
+                .iter()
+                .flat_map(|p| p.categories.iter().map(|c| (c.clone(), p.url.clone())))
+                .fold(std::collections::HashMap::new(), |mut acc, (cat, url)| {
+                    acc.entry(cat).or_default().push(url);
+                    acc
+                });
+
+            if !lang_categories.is_empty() {
+                let html = generator.generate_categories_index_page(&lang_categories, lang)?;
+                let output_path = if is_default {
+                    self.output_dir.join("categories").join("index.html")
+                } else {
+                    self.output_dir
+                        .join(&lang_prefix)
+                        .join("categories")
+                        .join("index.html")
+                };
+                if let Some(parent) = output_path.parent() {
+                    fs::create_dir_all(parent)?;
+                }
+                fs::write(&output_path, &html)?;
+                count += 1;
+                info!(path = %output_path.display(), lang = lang, "generated categories index page");
+            }
+
+            // 3. Generate archives page (/archives/ or /{lang}/archives/)
+            let mut lang_posts: Vec<_> = lang_pages
+                .iter()
+                .filter(|p| p.date.is_some())
+                .copied()
+                .collect();
+            lang_posts.sort_by(|a, b| b.date.cmp(&a.date));
+
+            if !lang_posts.is_empty() {
+                let html = generator.generate_archives_page(&lang_posts, lang)?;
+                let output_path = if is_default {
+                    self.output_dir.join("archives").join("index.html")
+                } else {
+                    self.output_dir
+                        .join(&lang_prefix)
+                        .join("archives")
+                        .join("index.html")
+                };
+                if let Some(parent) = output_path.parent() {
+                    fs::create_dir_all(parent)?;
+                }
+                fs::write(&output_path, &html)?;
+                count += 1;
+                info!(path = %output_path.display(), lang = lang, "generated archives page");
+            }
+
+            // 4. Generate section index pages (e.g., /posts/, /{lang}/posts/)
+            // Group pages by section within this language
+            let mut sections: std::collections::HashMap<String, Vec<&Page>> =
+                std::collections::HashMap::new();
+            for page in lang_pages.iter().copied() {
+                // Extract section from URL (first path segment after lang prefix if any)
+                let url = page.url.trim_start_matches('/');
+                let section = if is_default {
+                    url.split('/').next().unwrap_or("")
+                } else {
+                    // For non-default lang, URL starts with /{lang}/section/...
+                    url.split('/').nth(1).unwrap_or("")
+                };
+
+                if !section.is_empty() && section != "index.html" {
+                    sections.entry(section.to_string()).or_default().push(page);
+                }
+            }
+
+            for (section, mut section_pages) in sections {
+                // Sort by date (newest first) or by title
+                section_pages.sort_by(|a, b| match (&b.date, &a.date) {
+                    (Some(b_date), Some(a_date)) => b_date.cmp(a_date),
+                    (Some(_), None) => std::cmp::Ordering::Less,
+                    (None, Some(_)) => std::cmp::Ordering::Greater,
+                    (None, None) => a.title.cmp(&b.title),
+                });
+
+                // Generate paginated section index
+                let per_page = self.config.taxonomies.tags.paginate;
+                let total_pages = section_pages.len().div_ceil(per_page).max(1);
+
+                for page_num in 1..=total_pages {
+                    let (page_items, _) = paginate(&section_pages, page_num, per_page);
+
+                    let items_html: String = page_items.iter().map(|p| list_item_html(p)).collect();
+                    let base_url = if is_default {
+                        format!("/{section}")
+                    } else {
+                        format!("/{lang}/{section}")
+                    };
+                    let pagination = pagination_html(page_num, total_pages, &base_url);
+
+                    let html = generator.generate_section_page(
+                        &section,
+                        None, // description
+                        &items_html,
+                        pagination.as_deref(),
+                        lang,
+                    )?;
+
+                    let output_path = if page_num == 1 {
+                        if is_default {
+                            self.output_dir.join(&section).join("index.html")
+                        } else {
+                            self.output_dir
+                                .join(&lang_prefix)
+                                .join(&section)
+                                .join("index.html")
+                        }
+                    } else if is_default {
+                        self.output_dir
+                            .join(&section)
+                            .join("page")
+                            .join(page_num.to_string())
+                            .join("index.html")
+                    } else {
+                        self.output_dir
+                            .join(&lang_prefix)
+                            .join(&section)
+                            .join("page")
+                            .join(page_num.to_string())
+                            .join("index.html")
+                    };
+
+                    if let Some(parent) = output_path.parent() {
+                        fs::create_dir_all(parent)?;
+                    }
+                    fs::write(&output_path, &html)?;
+                    count += 1;
+                }
+
+                info!(section = %section, lang = %lang, "generated section index page");
+            }
+        }
+
+        Ok(count)
+    }
+
     /// Generate redirect pages for URL aliases.
     fn generate_redirects(&self, content: &SiteContent) -> Result<usize> {
         let generator = HtmlGenerator::new(self.config.clone());
@@ -328,11 +554,44 @@ impl Builder {
         // Filter to only posts (pages with dates)
         let posts: Vec<_> = pages.into_iter().filter(|p| p.date.is_some()).collect();
 
+        // Generate main RSS feed with all languages
         let xml = generator.generate(&posts)?;
         let output_path = self.output_dir.join("rss.xml");
         fs::write(&output_path, xml)?;
-
         info!(path = %output_path.display(), "generated RSS feed");
+
+        // Generate language-specific RSS feeds
+        let all_languages = self.config.all_languages();
+        let default_lang = &self.config.site.default_language;
+
+        for lang in &all_languages {
+            // Filter posts by language
+            let lang_posts: Vec<_> = posts.iter().filter(|p| p.lang == *lang).copied().collect();
+
+            if lang_posts.is_empty() {
+                continue;
+            }
+
+            // Generate language-specific feed
+            let lang_xml = generator.generate_for_lang(&lang_posts, lang)?;
+
+            // Determine output path
+            let lang_output_path = if *lang == default_lang.as_str() {
+                // For default language, still put at root but also in lang folder
+                self.output_dir.join(lang).join("rss.xml")
+            } else {
+                self.output_dir.join(lang).join("rss.xml")
+            };
+
+            // Create parent directories if needed
+            if let Some(parent) = lang_output_path.parent() {
+                fs::create_dir_all(parent)?;
+            }
+
+            fs::write(&lang_output_path, lang_xml)?;
+            info!(path = %lang_output_path.display(), lang = lang, "generated language-specific RSS feed");
+        }
+
         Ok(())
     }
 
@@ -344,8 +603,68 @@ impl Builder {
         let xml = generator.generate(&pages)?;
         let output_path = self.output_dir.join("sitemap.xml");
         fs::write(&output_path, xml)?;
-
         info!(path = %output_path.display(), "generated sitemap");
+
+        // Generate XSLT stylesheet for sitemap
+        let xsl = crate::sitemap::generate_sitemap_xsl();
+        let xsl_path = self.output_dir.join("sitemap-style.xsl");
+        fs::write(&xsl_path, xsl)?;
+        info!(path = %xsl_path.display(), "generated sitemap stylesheet");
+
+        Ok(())
+    }
+
+    /// Generate robots.txt.
+    fn generate_robots(&self) -> Result<()> {
+        let generator = RobotsGenerator::new(self.config.clone());
+        generator.generate(&self.output_dir)?;
+        Ok(())
+    }
+
+    /// Generate search indexes per language.
+    ///
+    /// Creates a `search-index.json` for default language at root,
+    /// and `/{lang}/search-index.json` for non-default languages.
+    fn generate_search_indexes(&self, content: &SiteContent) -> Result<()> {
+        let all_languages = self.config.all_languages();
+        let default_lang = &self.config.site.default_language;
+
+        for lang in &all_languages {
+            // Filter pages by language
+            let lang_pages: Vec<_> = content.pages.values().filter(|p| p.lang == *lang).collect();
+
+            if lang_pages.is_empty() {
+                continue;
+            }
+
+            // Build simple search index
+            let index = SimpleSearchIndex::from_pages(&lang_pages);
+
+            // Determine output path
+            let output_path = if *lang == default_lang.as_str() {
+                self.output_dir.join("search-index.json")
+            } else {
+                self.output_dir.join(lang).join("search-index.json")
+            };
+
+            // Create parent directories if needed
+            if let Some(parent) = output_path.parent() {
+                fs::create_dir_all(parent)?;
+            }
+
+            // Write the index
+            index
+                .write_to_file(&output_path)
+                .map_err(|e| BuildError::Config(e.to_string()))?;
+
+            info!(
+                path = %output_path.display(),
+                lang = lang,
+                documents = lang_pages.len(),
+                "generated search index"
+            );
+        }
+
         Ok(())
     }
 
@@ -364,6 +683,8 @@ impl Builder {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
+
     use tempfile::TempDir;
 
     use super::*;
@@ -374,16 +695,17 @@ mod tests {
                 title: "Test Site".to_string(),
                 base_url: "https://example.com".to_string(),
                 default_language: "en".to_string(),
-                languages: vec!["en".to_string()],
                 description: None,
                 author: None,
             },
+            languages: HashMap::new(),
             build: typstify_core::config::BuildConfig::default(),
             search: typstify_core::config::SearchConfig::default(),
             rss: typstify_core::config::RssConfig {
                 enabled: true,
                 limit: 20,
             },
+            robots: typstify_core::config::RobotsConfig::default(),
             taxonomies: typstify_core::config::TaxonomyConfig::default(),
         }
     }

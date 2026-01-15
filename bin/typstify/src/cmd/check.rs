@@ -1,6 +1,6 @@
 //! Check command - validate configuration and content
 
-use std::path::Path;
+use std::{collections::HashMap, path::Path};
 
 use color_eyre::eyre::{Result, bail};
 use typstify_core::Config;
@@ -58,6 +58,12 @@ pub fn run(config_path: &Path, strict: bool) -> Result<()> {
     if content_dir.exists() {
         println!("\nChecking content files...");
         validate_content_files(content_dir, &mut result)?;
+
+        // Check for multi-language content completeness
+        if let Some(ref cfg) = config {
+            println!("\nChecking multi-language content...");
+            validate_language_content(content_dir, cfg, &mut result)?;
+        }
     } else {
         result.add_warning("Content directory does not exist");
     }
@@ -110,6 +116,67 @@ pub fn run(config_path: &Path, strict: bool) -> Result<()> {
     println!("✓ All checks passed");
 
     Ok(())
+}
+
+/// Quick validation for build/watch commands.
+///
+/// Returns warnings for missing language translations (non-fatal).
+/// Call this before starting build/watch.
+pub fn quick_validate(config: &Config) -> Vec<String> {
+    let mut warnings = Vec::new();
+    let content_dir = Path::new("content");
+
+    if !content_dir.exists() {
+        return warnings;
+    }
+
+    let all_langs = config.all_languages();
+    if all_langs.len() <= 1 {
+        return warnings;
+    }
+
+    let default_lang = &config.site.default_language;
+
+    // Collect all content files and group by canonical name
+    let mut files_by_canonical: HashMap<String, Vec<String>> = HashMap::new();
+
+    if let Ok(entries) = std::fs::read_dir(content_dir) {
+        for entry in entries.filter_map(|e| e.ok()) {
+            let path = entry.path();
+            if path.is_file() {
+                let filename = path
+                    .file_name()
+                    .unwrap_or_default()
+                    .to_string_lossy()
+                    .to_string();
+                if let Some((canonical, lang)) =
+                    parse_content_file(&filename, default_lang, &all_langs)
+                {
+                    files_by_canonical.entry(canonical).or_default().push(lang);
+                }
+            }
+        }
+    }
+
+    // Check for missing translations of index page
+    let canonical = "index";
+    if let Some(langs) = files_by_canonical.get(canonical) {
+        for lang in &all_langs {
+            let lang_str = (*lang).to_string();
+            if !langs.contains(&lang_str) {
+                let expected_file = if *lang == default_lang.as_str() {
+                    "index.md".to_string()
+                } else {
+                    format!("index.{lang}.md")
+                };
+                warnings.push(format!(
+                    "Missing content/{expected_file} - visiting /{lang}/  will show 404",
+                ));
+            }
+        }
+    }
+
+    warnings
 }
 
 /// Validate all content files in the given directory.
@@ -204,5 +271,145 @@ fn check_config_values(config: &Config, result: &mut ValidationResult) {
         ));
     }
 
+    // Check for conflicting language settings
+    let all_langs = config.all_languages();
+    if all_langs.len() > 1 {
+        // Check if default language is in the languages map
+        if !config.languages.contains_key(&config.site.default_language)
+            && config.site.default_language != "en"
+        {
+            result.add_warning(format!(
+                "Default language '{}' not explicitly configured in [languages] section",
+                config.site.default_language
+            ));
+        }
+    }
+
     println!("  ✓ Configuration values checked");
+}
+
+/// Validate multi-language content completeness.
+///
+/// Checks that important content files exist for all configured languages.
+fn validate_language_content(
+    content_dir: &Path,
+    config: &Config,
+    result: &mut ValidationResult,
+) -> Result<()> {
+    let all_langs = config.all_languages();
+
+    // Only check if multiple languages are configured
+    if all_langs.len() <= 1 {
+        println!("  ✓ Single language configured, skipping multi-language checks");
+        return Ok(());
+    }
+
+    let default_lang = &config.site.default_language;
+
+    // Collect all content files and group by canonical name
+    let mut files_by_canonical: HashMap<String, Vec<String>> = HashMap::new();
+
+    for entry in walkdir::WalkDir::new(content_dir)
+        .into_iter()
+        .filter_map(|e| e.ok())
+        .filter(|e| e.file_type().is_file())
+    {
+        let path = entry.path();
+        let relative = path
+            .strip_prefix(content_dir)
+            .unwrap_or(path)
+            .to_string_lossy()
+            .to_string();
+
+        // Parse the filename to extract language suffix
+        // e.g., "index.md" (default), "index.zh.md" (zh), "posts/hello.md", "posts/hello.zh.md"
+        if let Some((canonical, lang)) = parse_content_file(&relative, default_lang, &all_langs) {
+            files_by_canonical.entry(canonical).or_default().push(lang);
+        }
+    }
+
+    // Check for missing translations of important pages
+    let mut missing_count = 0;
+    let important_pages = ["index.md", "about.md"];
+
+    for page in important_pages {
+        let canonical = page.replace(".md", "");
+        if let Some(langs) = files_by_canonical.get(&canonical) {
+            for lang in &all_langs {
+                let lang_str = (*lang).to_string();
+                if !langs.contains(&lang_str) {
+                    let expected_file = if *lang == default_lang.as_str() {
+                        page.to_string()
+                    } else {
+                        page.replace(".md", &format!(".{lang}.md"))
+                    };
+                    result.add_warning(format!(
+                        "Missing translation: content/{expected_file} (language: {lang})",
+                    ));
+                    missing_count += 1;
+                }
+            }
+        }
+    }
+
+    // Report summary
+    let total_pages = files_by_canonical.len();
+    let mut fully_translated = 0;
+    let mut partially_translated = 0;
+
+    for langs in files_by_canonical.values() {
+        if langs.len() == all_langs.len() {
+            fully_translated += 1;
+        } else if langs.len() > 1 {
+            partially_translated += 1;
+        }
+    }
+
+    if missing_count == 0 {
+        println!(
+            "  ✓ All important pages have translations ({} languages)",
+            all_langs.len()
+        );
+    } else {
+        println!("  ⚠ {missing_count} missing translation(s) for important pages");
+    }
+
+    println!(
+        "  ℹ Content summary: {total_pages} pages, {fully_translated} fully translated, {partially_translated} partially translated"
+    );
+
+    Ok(())
+}
+
+/// Parse a content file path to extract canonical name and language.
+///
+/// Returns (canonical_name, language_code)
+fn parse_content_file(
+    path: &str,
+    default_lang: &str,
+    all_langs: &[&str],
+) -> Option<(String, String)> {
+    let ext = if path.ends_with(".md") {
+        ".md"
+    } else if path.ends_with(".typ") {
+        ".typ"
+    } else {
+        return None;
+    };
+
+    let without_ext = path.strip_suffix(ext)?;
+
+    // Check for language suffix like ".zh" or ".ja"
+    for lang in all_langs {
+        if *lang != default_lang {
+            let suffix = format!(".{lang}");
+            if without_ext.ends_with(&suffix) {
+                let canonical = without_ext.strip_suffix(&suffix)?.to_string();
+                return Some((canonical, (*lang).to_string()));
+            }
+        }
+    }
+
+    // No language suffix means default language
+    Some((without_ext.to_string(), default_lang.to_string()))
 }

@@ -131,8 +131,7 @@ impl SearchIndexer {
         doc.add_text(self.fields.url, &page.url);
 
         // Add language
-        let lang = page.lang.as_deref().unwrap_or(&self.config.default_lang);
-        doc.add_text(self.fields.lang, lang);
+        doc.add_text(self.fields.lang, &page.lang);
 
         // Add tags
         let tags_text = page.tags.join(" ");
@@ -294,7 +293,9 @@ mod tests {
             date: Some(Utc::now()),
             updated: None,
             draft: false,
-            lang: Some("en".to_string()),
+            lang: "en".to_string(),
+            is_default_lang: true,
+            canonical_id: url.trim_start_matches('/').to_string(),
             tags: vec!["rust".to_string(), "search".to_string()],
             categories: vec![],
             content: content.to_string(),
