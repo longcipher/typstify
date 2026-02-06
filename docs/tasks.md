@@ -706,55 +706,55 @@
 ```toml
 [workspace.dependencies]
 # CLI & Config
-clap = "4"
-config = "0.15"
-eyre = "0.6"
-color-eyre = "0.6"
-thiserror = "2"
+clap = "4.5.57"
+config = "0.15.19"
+eyre = "0.6.12"
+color-eyre = "0.6.5"
+thiserror = "2.0.18"
 
 # Async & Runtime
-tokio = "1"
+tokio = "1.49.0"
 
 # Serialization
-serde = "1"
-serde_json = "1"
-toml = "0.8"
+serde = "1.0.228"
+serde_json = "1.0.149"
+toml = "0.9.11"
 
 # Content Processing
-pulldown-cmark = "0.12"
-typst = "0.13"
-syntect = "5"
+pulldown-cmark = "0.13.0"
+typst = "0.14.2"
+syntect = "5.3.0"
 
 # Search
-tantivy = "0.22"
+tantivy = "0.25.0"
 
 # WASM
-wasm-bindgen = "0.2"
-gloo-net = "0.6"
-serde-wasm-bindgen = "0.6"
-console_error_panic_hook = "0.1"
+wasm-bindgen = "0.2.108"
+gloo-net = "0.6.0"
+serde-wasm-bindgen = "0.6.5"
+console_error_panic_hook = "0.1.7"
 
 # Web & Frontend
-leptos = "0.8"
-leptos_meta = "0.8"
-leptos_router = "0.8"
+leptos = "0.8.15"
+leptos_meta = "0.8.5"
+leptos_router = "0.8.11"
 
 # Dev Server (embedded in CLI)
-axum = "0.8"
-tower-http = "0.6"
+axum = "0.8.8"
+tower-http = "0.6.8"
 
 # Utilities
-scc = "3"
-arc-swap = "1"
-rayon = "1"
-notify = "7"
-chrono = "0.4"
-rss = "2"
-open = "5"          # Open browser
+scc = "3.5.6"
+arc-swap = "1.8.1"
+rayon = "1.11.0"
+notify = "8.2.0"
+chrono = "0.4.43"
+rss = "2.0.12"
+open = "5.3.3"
 
 # Observability
-tracing = "0.1"
-tracing-subscriber = "0.3"
+tracing = "0.1.44"
+tracing-subscriber = "0.3.22"
 ```
 
 ---
