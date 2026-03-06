@@ -416,7 +416,7 @@ impl Builder {
                 .filter(|p| p.date.is_some())
                 .copied()
                 .collect();
-            lang_posts.sort_by(|a, b| b.date.cmp(&a.date));
+            lang_posts.sort_by_key(|b| std::cmp::Reverse(b.date));
 
             if !lang_posts.is_empty() {
                 let html = generator.generate_archives_page(&lang_posts, lang)?;

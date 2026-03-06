@@ -480,7 +480,7 @@ impl HtmlGenerator {
         let base_path = self.config.base_path();
 
         let mut items: Vec<_> = tags.iter().collect();
-        items.sort_by(|a, b| b.1.len().cmp(&a.1.len())); // Sort by count descending
+        items.sort_by_key(|b| std::cmp::Reverse(b.1.len())); // Sort by count descending
 
         let items_html: String = items
             .iter()
@@ -628,7 +628,7 @@ impl HtmlGenerator {
 
         // Sort pages within each year by date (newest first)
         for pages in by_year.values_mut() {
-            pages.sort_by(|a, b| b.date.cmp(&a.date));
+            pages.sort_by_key(|b| std::cmp::Reverse(b.date));
         }
 
         // Generate HTML (years in descending order)

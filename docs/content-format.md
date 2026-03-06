@@ -58,16 +58,19 @@ Content starts here...
 
 ```markdown
 # Heading 1
+
 ## Heading 2
+
 ### Heading 3
+
 #### Heading 4
 ```
 
 #### Emphasis
 
 ```markdown
-*italic* or _italic_
-**bold** or __bold__
+*italic* or *italic*
+**bold** or **bold**
 ***bold italic***
 ~~strikethrough~~
 ```
