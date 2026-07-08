@@ -2,12 +2,19 @@
 <?xml-stylesheet type="text/xsl" href="/sitemap-style.xsl"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
-    <loc>https://longcipher.github.io/typstify/docs/technical-spec</loc>
-    <lastmod>2024-01-22</lastmod>
+    <loc>https://longcipher.github.io/typstify/posts/hello-world</loc>
+    <lastmod>2024-01-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
-    <xhtml:link rel="alternate" hreflang="en" href="https://longcipher.github.io/typstify/docs/technical-spec" />
-    <xhtml:link rel="alternate" hreflang="zh" href="https://longcipher.github.io/typstify/zh/docs/technical-spec" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://longcipher.github.io/typstify/posts/hello-world" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://longcipher.github.io/typstify/zh/posts/hello-world" />
+  </url>
+  <url>
+    <loc>https://longcipher.github.io/typstify/</loc>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://longcipher.github.io/typstify/" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://longcipher.github.io/typstify/zh/" />
   </url>
   <url>
     <loc>https://longcipher.github.io/typstify/about</loc>
@@ -15,14 +22,6 @@
     <priority>0.5</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://longcipher.github.io/typstify/about" />
     <xhtml:link rel="alternate" hreflang="zh" href="https://longcipher.github.io/typstify/zh/about" />
-  </url>
-  <url>
-    <loc>https://longcipher.github.io/typstify/posts/getting-started</loc>
-    <lastmod>2024-01-20</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-    <xhtml:link rel="alternate" hreflang="en" href="https://longcipher.github.io/typstify/posts/getting-started" />
-    <xhtml:link rel="alternate" hreflang="zh" href="https://longcipher.github.io/typstify/zh/posts/getting-started" />
   </url>
   <url>
     <loc>https://longcipher.github.io/typstify/posts/advanced-features</loc>
@@ -47,6 +46,14 @@
     <xhtml:link rel="alternate" hreflang="zh" href="https://longcipher.github.io/typstify/zh/zh/" />
   </url>
   <url>
+    <loc>https://longcipher.github.io/typstify/posts/getting-started</loc>
+    <lastmod>2024-01-20</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://longcipher.github.io/typstify/posts/getting-started" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://longcipher.github.io/typstify/zh/posts/getting-started" />
+  </url>
+  <url>
     <loc>https://longcipher.github.io/typstify/zh/posts/hello-world</loc>
     <lastmod>2024-01-15</lastmod>
     <changefreq>monthly</changefreq>
@@ -55,18 +62,11 @@
     <xhtml:link rel="alternate" hreflang="zh" href="https://longcipher.github.io/typstify/zh/zh/posts/hello-world" />
   </url>
   <url>
-    <loc>https://longcipher.github.io/typstify/</loc>
-    <changefreq>daily</changefreq>
-    <priority>1.0</priority>
-    <xhtml:link rel="alternate" hreflang="en" href="https://longcipher.github.io/typstify/" />
-    <xhtml:link rel="alternate" hreflang="zh" href="https://longcipher.github.io/typstify/zh/" />
-  </url>
-  <url>
-    <loc>https://longcipher.github.io/typstify/posts/hello-world</loc>
-    <lastmod>2024-01-15</lastmod>
+    <loc>https://longcipher.github.io/typstify/docs/technical-spec</loc>
+    <lastmod>2024-01-22</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
-    <xhtml:link rel="alternate" hreflang="en" href="https://longcipher.github.io/typstify/posts/hello-world" />
-    <xhtml:link rel="alternate" hreflang="zh" href="https://longcipher.github.io/typstify/zh/posts/hello-world" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://longcipher.github.io/typstify/docs/technical-spec" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://longcipher.github.io/typstify/zh/docs/technical-spec" />
   </url>
 </urlset>
