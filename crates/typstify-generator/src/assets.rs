@@ -60,17 +60,7 @@ impl AssetManifest {
 
     /// Serialize manifest to JSON.
     pub fn to_json(&self) -> String {
-        let mut json = String::from("{\n");
-        let entries: Vec<_> = self.assets.iter().collect();
-        for (i, (orig, fp)) in entries.iter().enumerate() {
-            json.push_str(&format!(r#"  "{orig}": "{fp}""#));
-            if i < entries.len() - 1 {
-                json.push(',');
-            }
-            json.push('\n');
-        }
-        json.push('}');
-        json
+        serde_json::to_string_pretty(&self.assets).unwrap_or_else(|_| "{}".to_string())
     }
 }
 
@@ -230,8 +220,8 @@ impl AssetProcessor {
             hash = hash.wrapping_mul(0x100000001b3);
         }
 
-        // Return first 8 hex characters
-        Ok(format!("{hash:016x}")[..8].to_string())
+        // Return first 12 hex characters
+        Ok(format!("{hash:016x}")[..12].to_string())
     }
 
     /// Copy a single file without fingerprinting.
@@ -340,7 +330,22 @@ mod tests {
         let hash2 = processor.compute_hash(&path).unwrap();
 
         assert_eq!(hash1, hash2);
-        assert_eq!(hash1.len(), 8);
+        assert_eq!(hash1.len(), 12);
+    }
+
+    #[test]
+    fn test_compute_hash_uniqueness() {
+        let dir = TempDir::new().unwrap();
+        let path1 = dir.path().join("file1.txt");
+        let path2 = dir.path().join("file2.txt");
+        fs::write(&path1, b"content A").unwrap();
+        fs::write(&path2, b"content B").unwrap();
+
+        let processor = AssetProcessor::new(true);
+        let hash1 = processor.compute_hash(&path1).unwrap();
+        let hash2 = processor.compute_hash(&path2).unwrap();
+
+        assert_ne!(hash1, hash2);
     }
 
     #[test]
@@ -351,5 +356,27 @@ mod tests {
         assert!(!nested.exists());
         AssetProcessor::ensure_dir(&nested).unwrap();
         assert!(nested.exists());
+    }
+
+    #[test]
+    fn test_to_json_valid() {
+        let mut manifest = AssetManifest::new();
+        manifest.add("style.css", "style.abc123.css");
+        manifest.add("script.js", "script.def456.js");
+        let json = manifest.to_json();
+        let parsed: serde_json::Value = serde_json::from_str(&json).unwrap();
+        assert!(parsed.is_object());
+        assert_eq!(parsed["style.css"], "style.abc123.css");
+        assert_eq!(parsed["script.js"], "script.def456.js");
+    }
+
+    #[test]
+    fn test_to_json_special_chars() {
+        let mut manifest = AssetManifest::new();
+        manifest.add("path with spaces.css", "path with spaces.abc.css");
+        manifest.add("quotes\".js", "quotes\".def.js");
+        let json = manifest.to_json();
+        let parsed: serde_json::Value = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed["path with spaces.css"], "path with spaces.abc.css");
     }
 }

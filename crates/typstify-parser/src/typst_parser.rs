@@ -10,6 +10,7 @@ use thiserror::Error;
 use typstify_core::{
     content::{ParsedContent, TocEntry},
     frontmatter::parse_typst_frontmatter,
+    utils::{html_escape, slugify},
 };
 
 /// Typst parsing errors.
@@ -75,8 +76,7 @@ impl TypstParser {
         // For now, wrap the Typst source in a placeholder
         // Full compilation will be done in the generator with proper World setup
         let html = format!(
-            "<div class=\"typst-source\" data-path=\"{}\">\n<pre><code class=\"language-typst\">{}</code></pre>\n</div>",
-            path.display(),
+            "<div class=\"typst-source\">\n<pre><code class=\"language-typst\">{}</code></pre>\n</div>",
             html_escape(&body)
         );
 
@@ -133,35 +133,6 @@ fn parse_typst_heading(line: &str) -> Option<TocEntry> {
     })
 }
 
-/// Convert text to a URL-safe slug.
-fn slugify(text: &str) -> String {
-    text.to_lowercase()
-        .chars()
-        .map(|c| {
-            if c.is_alphanumeric() {
-                c
-            } else if c.is_whitespace() || c == '-' || c == '_' {
-                '-'
-            } else {
-                '\0'
-            }
-        })
-        .filter(|c| *c != '\0')
-        .collect::<String>()
-        .split('-')
-        .filter(|s| !s.is_empty())
-        .collect::<Vec<_>>()
-        .join("-")
-}
-
-/// Escape HTML special characters.
-fn html_escape(s: &str) -> String {
-    s.replace('&', "&amp;")
-        .replace('<', "&lt;")
-        .replace('>', "&gt;")
-        .replace('"', "&quot;")
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -178,12 +149,6 @@ mod tests {
 
         assert!(parse_typst_heading("Not a heading").is_none());
         assert!(parse_typst_heading("=").is_none()); // Empty heading
-    }
-
-    #[test]
-    fn test_slugify() {
-        assert_eq!(slugify("Hello World"), "hello-world");
-        assert_eq!(slugify("Test 123"), "test-123");
     }
 
     #[test]
@@ -218,11 +183,5 @@ This is a test document."#;
         assert_eq!(result.frontmatter.title, "Test Document");
         assert!(!result.toc.is_empty());
         assert!(result.html.contains("typst-source"));
-    }
-
-    #[test]
-    fn test_html_escape() {
-        assert_eq!(html_escape("<script>"), "&lt;script&gt;");
-        assert_eq!(html_escape("a & b"), "a &amp; b");
     }
 }

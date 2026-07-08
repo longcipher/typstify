@@ -6,6 +6,7 @@
 use std::collections::HashMap;
 
 use thiserror::Error;
+use typstify_core::utils::html_escape;
 
 /// Template rendering errors.
 #[derive(Debug, Error)]
@@ -91,6 +92,7 @@ impl Template {
     /// Render the template with the given context.
     ///
     /// Replaces all `{{ variable }}` placeholders with values from context.
+    /// Values are HTML-escaped by default. Use `{{ variable|raw }}` to skip escaping.
     pub fn render(&self, context: &TemplateContext) -> Result<String> {
         let mut result = self.content.clone();
         let mut pos = 0;
@@ -111,11 +113,20 @@ impl Template {
                 (var_name, false)
             };
 
+            // Check for raw (unescaped) syntax: {{ variable|raw }}
+            let (var_name, raw) = if let Some(stripped) = var_name.strip_suffix("|raw") {
+                (stripped.trim(), true)
+            } else {
+                (var_name, false)
+            };
+
             let value = match context.get(var_name) {
                 Some(v) => v.to_string(),
                 None if optional => String::new(),
                 None => return Err(TemplateError::MissingVariable(var_name.to_string())),
             };
+
+            let value = if raw { value } else { html_escape(&value) };
 
             result.replace_range(start..end, &value);
             pos = start + value.len();
@@ -190,12 +201,12 @@ pub const DEFAULT_BASE_TEMPLATE: &str = r##"<!DOCTYPE html>
     <meta name="description" content="{{ description? }}">
     <meta name="author" content="{{ author? }}">
     <link rel="canonical" href="{{ canonical_url }}">
-    {{ hreflang? }}
+    {{ hreflang|raw? }}
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ base_path }}/assets/style.css">
-    {{ custom_css? }}
+    {{ custom_css|raw? }}
     <script>
         // Inline critical JS to prevent FOUC (Flash of Unstyled Content)
         (function() {
@@ -211,7 +222,7 @@ pub const DEFAULT_BASE_TEMPLATE: &str = r##"<!DOCTYPE html>
             <nav>
                 <a href="{{ nav_home_url }}" class="site-title">{{ site_title }}</a>
                 <div class="nav-links">
-                    {{ section_nav? }}
+                    {{ section_nav|raw? }}
                     <a href="{{ nav_archives_url }}">Archives</a>
                     <a href="{{ nav_tags_url }}">Tags</a>
                     <a href="{{ nav_about_url }}">About</a>
@@ -225,7 +236,7 @@ pub const DEFAULT_BASE_TEMPLATE: &str = r##"<!DOCTYPE html>
                             </button>
                             <div class="search-results" id="searchResults"></div>
                         </div>
-                        {{ lang_switcher? }}
+                        {{ lang_switcher|raw? }}
                         <button class="theme-toggle" aria-label="Toggle theme" type="button">
                             <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
@@ -241,7 +252,7 @@ pub const DEFAULT_BASE_TEMPLATE: &str = r##"<!DOCTYPE html>
     </header>
     <main>
         <div class="container">
-            {{ content }}
+            {{ content|raw }}
         </div>
     </main>
     <footer>
@@ -250,7 +261,7 @@ pub const DEFAULT_BASE_TEMPLATE: &str = r##"<!DOCTYPE html>
         </div>
     </footer>
     <script src="{{ base_path }}/assets/main.js" defer></script>
-    {{ custom_js? }}
+    {{ custom_js|raw? }}
 </body>
 </html>"##;
 
@@ -258,7 +269,7 @@ pub const DEFAULT_BASE_TEMPLATE: &str = r##"<!DOCTYPE html>
 pub const DEFAULT_PAGE_TEMPLATE: &str = r#"<article class="page">
     <h1>{{ title }}</h1>
     <div class="content">
-        {{ content }}
+        {{ content|raw }}
     </div>
 </article>"#;
 
@@ -267,10 +278,10 @@ pub const DEFAULT_POST_TEMPLATE: &str = r#"<article class="post">
     <header>
         <h1>{{ title }}</h1>
         <time datetime="{{ date_iso }}">{{ date_formatted }}</time>
-        {{ tags_html? }}
+        {{ tags_html|raw? }}
     </header>
     <div class="content">
-        {{ content }}
+        {{ content|raw }}
     </div>
 </article>"#;
 
@@ -278,18 +289,18 @@ pub const DEFAULT_POST_TEMPLATE: &str = r#"<article class="post">
 pub const DEFAULT_LIST_TEMPLATE: &str = r#"<section class="post-list">
     <h1>{{ title }}</h1>
     <ul>
-        {{ items }}
+        {{ items|raw }}
     </ul>
-    <div class="pagination">{{ pagination? }}</div>
+    <div class="pagination">{{ pagination|raw? }}</div>
 </section>"#;
 
 /// Default taxonomy term template (for tag/category pages).
 pub const DEFAULT_TAXONOMY_TEMPLATE: &str = r#"<section class="taxonomy post-list">
     <h1>{{ taxonomy_name }}: <span>{{ term }}</span></h1>
     <ul>
-        {{ items }}
+        {{ items|raw }}
     </ul>
-    <div class="pagination">{{ pagination? }}</div>
+    <div class="pagination">{{ pagination|raw? }}</div>
 </section>"#;
 
 /// Default redirect template for URL aliases.
@@ -310,7 +321,7 @@ pub const DEFAULT_REDIRECT_TEMPLATE: &str = r#"<!DOCTYPE html>
 pub const DEFAULT_TAGS_INDEX_TEMPLATE: &str = r#"<section class="taxonomy-index">
     <h1>Tags</h1>
     <div class="tags-cloud">
-        {{ items }}
+        {{ items|raw }}
     </div>
 </section>"#;
 
@@ -318,14 +329,14 @@ pub const DEFAULT_TAGS_INDEX_TEMPLATE: &str = r#"<section class="taxonomy-index"
 pub const DEFAULT_CATEGORIES_INDEX_TEMPLATE: &str = r#"<section class="taxonomy-index">
     <h1>Categories</h1>
     <ul class="categories-list">
-        {{ items }}
+        {{ items|raw }}
     </ul>
 </section>"#;
 
 /// Default archives template (lists all posts grouped by year).
 pub const DEFAULT_ARCHIVES_TEMPLATE: &str = r#"<section class="archives">
     <h1>Archives</h1>
-    {{ items }}
+    {{ items|raw }}
 </section>"#;
 
 /// Default section template (lists all posts in a section).
@@ -333,16 +344,16 @@ pub const DEFAULT_SECTION_TEMPLATE: &str = r#"<section class="section-list post-
     <h1>{{ title }}</h1>
     <p class="section-description">{{ description? }}</p>
     <ul>
-        {{ items }}
+        {{ items|raw }}
     </ul>
-    <div class="pagination">{{ pagination? }}</div>
+    <div class="pagination">{{ pagination|raw? }}</div>
 </section>"#;
 
 /// Default short template (minimalist layout).
 pub const DEFAULT_SHORT_TEMPLATE: &str = r#"<div class="short-item">
     <time class="short-date" datetime="{{ date_iso }}">{{ date_formatted }}</time>
     <div class="short-content">
-        {{ content }}
+        {{ content|raw }}
     </div>
 </div>"#;
 
@@ -351,9 +362,9 @@ pub const DEFAULT_SHORTS_SECTION_TEMPLATE: &str = r#"<section class="shorts-sect
     <h1>{{ title }}</h1>
     <p class="section-description">{{ description? }}</p>
     <div class="short-list">
-        {{ items }}
+        {{ items|raw }}
     </div>
-    <div class="pagination">{{ pagination? }}</div>
+    <div class="pagination">{{ pagination|raw? }}</div>
 </section>"#;
 
 #[cfg(test)]
@@ -440,5 +451,46 @@ mod tests {
         assert!(result.contains("<!DOCTYPE html>"));
         assert!(result.contains("<title>My Page</title>"));
         assert!(result.contains("<p>Hello!</p>"));
+    }
+
+    #[test]
+    fn test_auto_escaping() {
+        let template = Template::new("test", "Hello, {{ name }}!");
+        let ctx = TemplateContext::new().with_var("name", "<b>bold</b>");
+
+        let result = template.render(&ctx).unwrap();
+        assert_eq!(result, "Hello, &lt;b&gt;bold&lt;/b&gt;!");
+        assert!(!result.contains("<b>"));
+    }
+
+    #[test]
+    fn test_raw_suffix() {
+        let template = Template::new("test", "{{ content|raw }}");
+        let ctx = TemplateContext::new().with_var("content", "<p>Hello</p>");
+
+        let result = template.render(&ctx).unwrap();
+        assert_eq!(result, "<p>Hello</p>");
+    }
+
+    #[test]
+    fn test_raw_with_optional() {
+        let template = Template::new("test", "{{ content|raw? }}");
+        let ctx = TemplateContext::new();
+
+        let result = template.render(&ctx).unwrap();
+        assert_eq!(result, "");
+
+        let ctx = TemplateContext::new().with_var("content", "<b>bold</b>");
+        let result = template.render(&ctx).unwrap();
+        assert_eq!(result, "<b>bold</b>");
+    }
+
+    #[test]
+    fn test_html_escape_in_attribute() {
+        let template = Template::new("test", r#"<meta name="description" content="{{ desc }}">"#);
+        let ctx = TemplateContext::new().with_var("desc", "A \"quoted\" description");
+
+        let result = template.render(&ctx).unwrap();
+        assert!(result.contains("A &quot;quoted&quot; description"));
     }
 }

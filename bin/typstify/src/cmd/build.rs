@@ -29,7 +29,7 @@ pub fn run(
     );
 
     // Load configuration
-    let mut config = Config::load(config_path).wrap_err("Failed to load configuration")?;
+    let mut config = Config::load_with_env(config_path).wrap_err("Failed to load configuration")?;
 
     // Quick validation - print warnings for missing language files
     let warnings = quick_validate(&config);

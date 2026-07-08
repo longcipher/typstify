@@ -2,6 +2,7 @@
 
 use syntect::{highlighting::ThemeSet, html::highlighted_html_for_string, parsing::SyntaxSet};
 use thiserror::Error;
+use typstify_core::utils::html_escape;
 
 /// Syntax highlighting errors.
 #[derive(Debug, Error)]
@@ -82,15 +83,6 @@ impl SyntaxHighlighter {
     }
 }
 
-/// Escape HTML special characters.
-fn html_escape(s: &str) -> String {
-    s.replace('&', "&amp;")
-        .replace('<', "&lt;")
-        .replace('>', "&gt;")
-        .replace('"', "&quot;")
-        .replace('\'', "&#x27;")
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -122,12 +114,6 @@ mod tests {
         let html = highlighter.highlight(code, None);
 
         assert!(html.contains("plain text"));
-    }
-
-    #[test]
-    fn test_html_escape() {
-        assert_eq!(html_escape("<script>"), "&lt;script&gt;");
-        assert_eq!(html_escape("a & b"), "a &amp; b");
     }
 
     #[test]

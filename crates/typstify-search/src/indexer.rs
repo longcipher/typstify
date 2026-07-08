@@ -8,7 +8,7 @@ use tantivy::{
     DateTime as TantivyDateTime, Index, IndexWriter, TantivyDocument, directory::MmapDirectory,
 };
 use tracing::{debug, info};
-use typstify_core::Page;
+use typstify_core::{Page, utils::strip_html};
 
 use crate::{
     SearchError,
@@ -124,7 +124,7 @@ impl SearchIndexer {
         doc.add_text(self.fields.title, &page.title);
 
         // Add body (strip HTML tags)
-        let body_text = strip_html_tags(&page.content);
+        let body_text = strip_html(&page.content);
         doc.add_text(self.fields.body, &body_text);
 
         // Add URL
@@ -205,80 +205,6 @@ impl SearchIndexer {
     }
 }
 
-/// Strip HTML tags from content to get plain text.
-///
-/// This is a simple implementation that handles common cases.
-fn strip_html_tags(html: &str) -> String {
-    let mut result = String::with_capacity(html.len());
-    let mut in_tag = false;
-    let mut in_script = false;
-    let mut in_style = false;
-
-    let html_lower = html.to_lowercase();
-    let chars: Vec<char> = html.chars().collect();
-    let chars_lower: Vec<char> = html_lower.chars().collect();
-
-    let mut i = 0;
-    while i < chars.len() {
-        let c = chars[i];
-
-        // Check for script/style start
-        if i + 7 < chars.len() {
-            let next_7: String = chars_lower[i..i + 7].iter().collect();
-            if next_7 == "<script" {
-                in_script = true;
-            } else if next_7 == "</scrip" {
-                in_script = false;
-            }
-        }
-
-        if i + 6 < chars.len() {
-            let next_6: String = chars_lower[i..i + 6].iter().collect();
-            if next_6 == "<style" {
-                in_style = true;
-            } else if next_6 == "</styl" {
-                in_style = false;
-            }
-        }
-
-        if c == '<' {
-            in_tag = true;
-        } else if c == '>' {
-            in_tag = false;
-        } else if !in_tag && !in_script && !in_style {
-            result.push(c);
-        }
-
-        i += 1;
-    }
-
-    // Decode common HTML entities
-    result = result
-        .replace("&nbsp;", " ")
-        .replace("&amp;", "&")
-        .replace("&lt;", "<")
-        .replace("&gt;", ">")
-        .replace("&quot;", "\"")
-        .replace("&#39;", "'");
-
-    // Collapse multiple whitespace
-    let mut collapsed = String::with_capacity(result.len());
-    let mut prev_space = false;
-    for c in result.chars() {
-        if c.is_whitespace() {
-            if !prev_space {
-                collapsed.push(' ');
-                prev_space = true;
-            }
-        } else {
-            collapsed.push(c);
-            prev_space = false;
-        }
-    }
-
-    collapsed.trim().to_string()
-}
-
 #[cfg(test)]
 mod tests {
     use chrono::Utc;
@@ -310,31 +236,6 @@ mod tests {
             template: None,
             weight: 0,
         }
-    }
-
-    #[test]
-    fn test_strip_html_tags() {
-        let html = "<p>Hello <strong>world</strong>!</p>";
-        let text = strip_html_tags(html);
-        assert_eq!(text, "Hello world!");
-    }
-
-    #[test]
-    fn test_strip_html_with_script() {
-        let html = "<p>Before</p><script>alert('hi');</script><p>After</p>";
-        let text = strip_html_tags(html);
-        // Script content is removed, "Before" and "After" end up adjacent
-        // The important thing is script content is not included
-        assert!(text.contains("Before"));
-        assert!(text.contains("After"));
-        assert!(!text.contains("alert"));
-    }
-
-    #[test]
-    fn test_strip_html_entities() {
-        let html = "<p>Hello &amp; goodbye &lt;world&gt;</p>";
-        let text = strip_html_tags(html);
-        assert_eq!(text, "Hello & goodbye <world>");
     }
 
     #[test]

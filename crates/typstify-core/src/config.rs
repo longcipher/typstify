@@ -35,6 +35,10 @@ pub struct Config {
     /// Language-specific configurations.
     #[serde(default)]
     pub languages: HashMap<String, LanguageConfig>,
+
+    /// Cached base URL (host + base_path), computed once after construction.
+    #[serde(skip)]
+    pub cached_base_url: String,
 }
 
 /// Site-wide configuration.
@@ -99,6 +103,10 @@ pub struct BuildConfig {
     /// Whether to generate drafts.
     #[serde(default)]
     pub drafts: bool,
+
+    /// Whether to sanitize raw HTML in markdown output.
+    #[serde(default)]
+    pub sanitize_html: bool,
 }
 
 /// Search configuration.
@@ -205,6 +213,7 @@ impl Default for BuildConfig {
             minify: false,
             syntax_theme: default_syntax_theme(),
             drafts: false,
+            sanitize_html: false,
         }
     }
 }
@@ -247,6 +256,13 @@ impl Default for TaxonomySettings {
 }
 
 impl Config {
+    /// Compute the cached base URL from host and base_path.
+    fn compute_base_url(site: &SiteConfig) -> String {
+        let host = site.host.trim_end_matches('/');
+        let base_path = site.base_path.trim_end_matches('/');
+        format!("{host}{base_path}")
+    }
+
     /// Load configuration from a TOML file.
     pub fn load(path: &Path) -> Result<Self> {
         if !path.exists() {
@@ -257,7 +273,7 @@ impl Config {
         }
 
         let content = std::fs::read_to_string(path)?;
-        let config: Config = toml::from_str(&content).map_err(|e| {
+        let mut config: Config = toml::from_str(&content).map_err(|e| {
             CoreError::config_with_source(
                 format!("Failed to parse config file: {}", path.display()),
                 e,
@@ -265,6 +281,7 @@ impl Config {
         })?;
 
         config.validate()?;
+        config.cached_base_url = Self::compute_base_url(&config.site);
         Ok(config)
     }
 
@@ -275,8 +292,9 @@ impl Config {
             .add_source(config::Environment::with_prefix("TYPSTIFY").separator("__"))
             .build()?;
 
-        let config: Config = settings.try_deserialize()?;
+        let mut config: Config = settings.try_deserialize()?;
         config.validate()?;
+        config.cached_base_url = Self::compute_base_url(&config.site);
         Ok(config)
     }
 
@@ -305,10 +323,8 @@ impl Config {
 
     /// Get the full base URL (host + base_path).
     #[must_use]
-    pub fn base_url(&self) -> String {
-        let host = self.site.host.trim_end_matches('/');
-        let base_path = self.site.base_path.trim_end_matches('/');
-        format!("{host}{base_path}")
+    pub fn base_url(&self) -> &str {
+        &self.cached_base_url
     }
 
     /// Get the full URL for a path.
@@ -368,6 +384,30 @@ impl Config {
             .get(lang)
             .and_then(|lc| lc.name.as_deref())
             .unwrap_or(lang)
+    }
+
+    /// Construct a Config from its public parts.
+    #[must_use]
+    pub fn from_parts(
+        site: SiteConfig,
+        build: BuildConfig,
+        search: SearchConfig,
+        rss: RssConfig,
+        robots: RobotsConfig,
+        taxonomies: TaxonomyConfig,
+        languages: HashMap<String, LanguageConfig>,
+    ) -> Self {
+        let cached_base_url = Self::compute_base_url(&site);
+        Self {
+            site,
+            build,
+            search,
+            rss,
+            robots,
+            taxonomies,
+            languages,
+            cached_base_url,
+        }
     }
 }
 
@@ -529,6 +569,26 @@ base_path = "/typstify/"
         let config = Config::load(&config_path).expect("load");
         assert_eq!(config.base_path(), "/typstify");
         assert_eq!(config.base_url(), "https://longcipher.github.io/typstify");
+    }
+
+    #[test]
+    fn test_load_with_env_override() {
+        let dir = tempfile::tempdir().expect("create temp dir");
+        let config_path = dir.path().join("config.toml");
+        let mut file = std::fs::File::create(&config_path).expect("create file");
+        file.write_all(create_test_config().as_bytes())
+            .expect("write");
+
+        // Temporarily set env var to override site.title
+        // SAFETY: tests run single-threaded; env var is cleaned up after assertion.
+        unsafe { std::env::set_var("TYPSTIFY__SITE__TITLE", "Env Override Title") };
+
+        let config = Config::load_with_env(&config_path).expect("load config with env");
+
+        assert_eq!(config.site.title, "Env Override Title");
+
+        // Clean up env var
+        unsafe { std::env::remove_var("TYPSTIFY__SITE__TITLE") };
     }
 
     #[test]

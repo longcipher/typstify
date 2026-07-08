@@ -212,7 +212,7 @@ Typstify is organized as a Cargo workspace:
 
 ### Prerequisites
 
-- Rust 1.75+
+- Rust 1.85+
 - Bun (for CSS/JS tooling)
 - wasm-pack (for WASM builds)
 

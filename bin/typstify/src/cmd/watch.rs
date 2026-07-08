@@ -25,7 +25,7 @@ pub async fn run(config_path: &Path, port: u16, open_browser: bool) -> Result<()
     tracing::info!(?config_path, port, "Starting watch mode");
 
     // Load configuration
-    let mut config = Config::load(config_path).wrap_err("Failed to load configuration")?;
+    let mut config = Config::load_with_env(config_path).wrap_err("Failed to load configuration")?;
 
     // Quick validation - print warnings for missing language files
     let warnings = quick_validate(&config);
@@ -124,13 +124,19 @@ pub async fn run(config_path: &Path, port: u16, open_browser: bool) -> Result<()
         let mut last_rebuild = Instant::now();
 
         while rx.recv().await.is_some() {
-            // Debounce
+            // Debounce: if we recently rebuilt, wait for the debounce window to expire,
+            // drain any queued events, then fall through to rebuild.
             if last_rebuild.elapsed() < Duration::from_millis(DEBOUNCE_MS) {
-                continue;
+                while rx.try_recv().is_ok() {}
+                let remaining =
+                    DEBOUNCE_MS.saturating_sub(last_rebuild.elapsed().as_millis() as u64);
+                if remaining > 0 {
+                    tokio::time::sleep(Duration::from_millis(remaining)).await;
+                }
+            } else {
+                // Drain any queued events outside debounce window
+                while rx.try_recv().is_ok() {}
             }
-
-            // Drain any queued events
-            while rx.try_recv().is_ok() {}
 
             println!();
             println!("  File change detected, rebuilding...");

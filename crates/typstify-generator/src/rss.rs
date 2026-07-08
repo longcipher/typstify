@@ -27,14 +27,14 @@ pub type Result<T> = std::result::Result<T, RssError>;
 
 /// RSS feed generator.
 #[derive(Debug)]
-pub struct RssGenerator {
-    config: Config,
+pub struct RssGenerator<'a> {
+    config: &'a Config,
 }
 
-impl RssGenerator {
+impl<'a> RssGenerator<'a> {
     /// Create a new RSS generator.
     #[must_use]
-    pub fn new(config: Config) -> Self {
+    pub fn new(config: &'a Config) -> Self {
         Self { config }
     }
 
@@ -92,7 +92,7 @@ impl RssGenerator {
 
         // Determine the link for this language feed
         let link = if lang == self.config.site.default_language {
-            self.config.base_url().clone()
+            self.config.base_url().to_owned()
         } else {
             format!("{}/{}", self.config.base_url(), lang)
         };
@@ -164,33 +164,12 @@ impl RssGenerator {
 
 #[cfg(test)]
 mod tests {
-    use std::{collections::HashMap, path::PathBuf};
+    use std::path::PathBuf;
 
     use chrono::{DateTime, Utc};
+    use typstify_core::test_fixtures::test_config;
 
     use super::*;
-
-    fn test_config() -> Config {
-        Config {
-            site: typstify_core::config::SiteConfig {
-                title: "Test Blog".to_string(),
-                host: "https://example.com".to_string(),
-                base_path: String::new(),
-                default_language: "en".to_string(),
-                description: Some("A test blog".to_string()),
-                author: Some("Test Author".to_string()),
-            },
-            languages: HashMap::new(),
-            build: typstify_core::config::BuildConfig::default(),
-            search: typstify_core::config::SearchConfig::default(),
-            rss: typstify_core::config::RssConfig {
-                enabled: true,
-                limit: 20,
-            },
-            robots: typstify_core::config::RobotsConfig::default(),
-            taxonomies: typstify_core::config::TaxonomyConfig::default(),
-        }
-    }
 
     fn test_page(title: &str, date: Option<DateTime<Utc>>) -> Page {
         Page {
@@ -221,14 +200,15 @@ mod tests {
 
     #[test]
     fn test_generate_rss() {
-        let generator = RssGenerator::new(test_config());
+        let config = test_config();
+        let generator = RssGenerator::new(&config);
         let page1 = test_page("First Post", Some(Utc::now()));
         let page2 = test_page("Second Post", Some(Utc::now()));
         let pages: Vec<&Page> = vec![&page1, &page2];
 
         let xml = generator.generate(&pages).unwrap();
 
-        assert!(xml.contains("<title>Test Blog</title>"));
+        assert!(xml.contains("<title>Test Site</title>"));
         assert!(xml.contains("<link>https://example.com</link>"));
         assert!(xml.contains("First Post"));
         assert!(xml.contains("Second Post"));
@@ -239,7 +219,7 @@ mod tests {
     fn test_rss_limit() {
         let mut config = test_config();
         config.rss.limit = 1;
-        let generator = RssGenerator::new(config);
+        let generator = RssGenerator::new(&config);
 
         let page1 = test_page("First Post", Some(Utc::now()));
         let page2 = test_page("Second Post", Some(Utc::now()));
@@ -253,7 +233,8 @@ mod tests {
 
     #[test]
     fn test_page_to_item() {
-        let generator = RssGenerator::new(test_config());
+        let config = test_config();
+        let generator = RssGenerator::new(&config);
         let page = test_page("Test Post", Some(Utc::now()));
 
         let item = generator.page_to_item(&page).unwrap();

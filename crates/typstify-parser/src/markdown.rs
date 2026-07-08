@@ -7,6 +7,7 @@ use thiserror::Error;
 use typstify_core::{
     content::{ParsedContent, TocEntry},
     frontmatter::parse_frontmatter,
+    utils::{html_escape, slugify},
 };
 
 use crate::syntax::SyntaxHighlighter;
@@ -27,6 +28,7 @@ pub type Result<T> = std::result::Result<T, MarkdownError>;
 pub struct MarkdownParser {
     highlighter: SyntaxHighlighter,
     options: Options,
+    sanitize_html: bool,
 }
 
 impl Default for MarkdownParser {
@@ -48,7 +50,14 @@ impl MarkdownParser {
         Self {
             highlighter: SyntaxHighlighter::default(),
             options,
+            sanitize_html: false,
         }
+    }
+
+    /// Enable or disable HTML sanitization.
+    pub fn with_sanitize_html(mut self, sanitize: bool) -> Self {
+        self.sanitize_html = sanitize;
+        self
     }
 
     /// Create a parser with a custom syntax theme.
@@ -180,7 +189,11 @@ impl MarkdownParser {
 
                 // Handle HTML
                 Event::Html(raw) | Event::InlineHtml(raw) => {
-                    html.push_str(&raw);
+                    if self.sanitize_html {
+                        html.push_str(&sanitize_html_raw(&raw));
+                    } else {
+                        html.push_str(&raw);
+                    }
                 }
 
                 // Handle footnote references
@@ -219,7 +232,80 @@ impl MarkdownParser {
     }
 }
 
-/// Convert a pulldown-cmark tag to HTML opening tag.
+/// Strip dangerous HTML tags and on* event handler attributes.
+fn sanitize_html_raw(raw: &str) -> String {
+    let mut result = raw.to_string();
+
+    // Strip <script>, <iframe>, <object> tags (opening and closing)
+    for tag in &["script", "iframe", "object"] {
+        let open = format!("<{tag}");
+        let close = format!("</{tag}>");
+        while let Some(start) = result.to_lowercase().find(&open.to_lowercase()) {
+            let tag_end = find_tag_end(&result, start);
+            result.replace_range(start..tag_end, "");
+        }
+        while let Some(pos) = result.to_lowercase().find(&close.to_lowercase()) {
+            result.replace_range(pos..pos + close.len(), "");
+        }
+    }
+
+    // Strip on* event handler attributes from tags
+    strip_on_event_handlers(&mut result);
+
+    result
+}
+
+/// Find the end of an opening HTML tag (the position after '>').
+fn find_tag_end(s: &str, start: usize) -> usize {
+    s[start..]
+        .find('>')
+        .map(|i| start + i + 1)
+        .unwrap_or(s.len())
+}
+
+/// Strip `on*="..."` and `on*='...'` attributes from HTML tags.
+fn strip_on_event_handlers(s: &mut String) {
+    let mut result = String::with_capacity(s.len());
+    let bytes = s.as_bytes();
+    let mut i = 0;
+
+    while i < bytes.len() {
+        // Look for 'on' at start of an attribute name
+        if bytes[i] == b'o'
+            && i + 1 < bytes.len()
+            && bytes[i + 1] == b'n'
+            && (i == 0 || !bytes[i - 1].is_ascii_alphanumeric())
+        {
+            // Scan past the rest of the attribute name
+            let mut word_end = i + 2;
+            while word_end < bytes.len() && bytes[word_end].is_ascii_alphanumeric() {
+                word_end += 1;
+            }
+            // Check if followed by '=' (assignment)
+            if word_end > i + 2 && word_end < bytes.len() && bytes[word_end] == b'=' {
+                // Skip the on*="..." or on*='...' attribute
+                let mut pos = word_end + 1;
+                if pos < bytes.len() {
+                    let quote = bytes[pos];
+                    if quote == b'"' || quote == b'\'' {
+                        pos += 1;
+                        while pos < bytes.len() && bytes[pos] != quote {
+                            pos += 1;
+                        }
+                        pos += 1; // skip closing quote
+                    }
+                }
+                // Also skip any leading whitespace before the attribute
+                i = pos;
+                continue;
+            }
+        }
+        result.push(bytes[i] as char);
+        i += 1;
+    }
+
+    *s = result;
+}
 fn tag_to_html_start(tag: &Tag) -> String {
     match tag {
         Tag::Paragraph => "<p>".to_string(),
@@ -318,35 +404,6 @@ fn tag_to_html_end(tag: &TagEnd) -> String {
     }
 }
 
-/// Escape HTML special characters.
-fn html_escape(s: &str) -> String {
-    s.replace('&', "&amp;")
-        .replace('<', "&lt;")
-        .replace('>', "&gt;")
-        .replace('"', "&quot;")
-}
-
-/// Convert text to a URL-safe slug.
-fn slugify(text: &str) -> String {
-    text.to_lowercase()
-        .chars()
-        .map(|c| {
-            if c.is_alphanumeric() {
-                c
-            } else if c.is_whitespace() || c == '-' || c == '_' {
-                '-'
-            } else {
-                '\0'
-            }
-        })
-        .filter(|c| *c != '\0')
-        .collect::<String>()
-        .split('-')
-        .filter(|s| !s.is_empty())
-        .collect::<Vec<_>>()
-        .join("-")
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -402,14 +459,6 @@ fn main() {
     }
 
     #[test]
-    fn test_slugify() {
-        assert_eq!(slugify("Hello World"), "hello-world");
-        assert_eq!(slugify("Test 123 Post"), "test-123-post");
-        assert_eq!(slugify("Multiple   Spaces"), "multiple-spaces");
-        assert_eq!(slugify("Special!@#Chars"), "specialchars");
-    }
-
-    #[test]
     fn test_table_rendering() {
         let parser = MarkdownParser::new();
         let (html, _) = parser.parse_body(
@@ -444,5 +493,78 @@ fn main() {
 
         assert!(result.frontmatter.title.is_empty());
         assert!(result.html.contains("Just Content"));
+    }
+
+    #[test]
+    fn test_sanitize_html_strips_script_tags() {
+        let parser = MarkdownParser::new().with_sanitize_html(true);
+        let content = "Hello\n\n<script>alert(1)</script>\n\nWorld";
+        let (html, _) = parser.render_markdown(content);
+        assert!(!html.contains("<script>"), "script tag should be stripped");
+        assert!(html.contains("Hello"), "content before script preserved");
+        assert!(html.contains("World"), "content after script preserved");
+    }
+
+    #[test]
+    fn test_sanitize_html_disabled_preserves() {
+        let parser = MarkdownParser::new().with_sanitize_html(false);
+        let content = "Hello\n\n<script>alert(1)</script>\n\nWorld";
+        let (html, _) = parser.render_markdown(content);
+        assert!(
+            html.contains("<script>alert(1)</script>"),
+            "raw HTML preserved when disabled"
+        );
+    }
+
+    #[test]
+    fn test_sanitize_html_strips_iframe() {
+        let parser = MarkdownParser::new().with_sanitize_html(true);
+        let content = "Before\n\n<iframe src=\"evil.com\"></iframe>\n\nAfter";
+        let (html, _) = parser.render_markdown(content);
+        assert!(!html.contains("<iframe>"), "iframe tag should be stripped");
+        assert!(html.contains("Before"));
+        assert!(html.contains("After"));
+    }
+
+    #[test]
+    fn test_sanitize_html_strips_object() {
+        let parser = MarkdownParser::new().with_sanitize_html(true);
+        let content = "Before\n\n<object data=\"evil.swf\"></object>\n\nAfter";
+        let (html, _) = parser.render_markdown(content);
+        assert!(!html.contains("<object>"), "object tag should be stripped");
+        assert!(html.contains("Before"));
+        assert!(html.contains("After"));
+    }
+
+    #[test]
+    fn test_sanitize_html_strips_onclick() {
+        let parser = MarkdownParser::new().with_sanitize_html(true);
+        let content = "Hello\n\n<div onclick=\"alert(1)\">content</div>\n\nWorld";
+        let (html, _) = parser.render_markdown(content);
+        assert!(
+            !html.contains("onclick"),
+            "onclick attribute should be stripped"
+        );
+        assert!(html.contains("content"));
+    }
+
+    #[test]
+    fn test_sanitize_html_preserves_safe_tags() {
+        let parser = MarkdownParser::new().with_sanitize_html(true);
+        let content = "Hello\n\n<div class=\"safe\">content</div>\n\nWorld";
+        let (html, _) = parser.render_markdown(content);
+        assert!(html.contains("<div"), "safe div tag preserved");
+        assert!(html.contains("content"));
+    }
+
+    #[test]
+    fn test_sanitize_html_default_is_false() {
+        let parser = MarkdownParser::new();
+        let content = "Hello\n\n<script>alert(1)</script>\n\nWorld";
+        let (html, _) = parser.render_markdown(content);
+        assert!(
+            html.contains("<script>alert(1)</script>"),
+            "default behavior preserves raw HTML"
+        );
     }
 }

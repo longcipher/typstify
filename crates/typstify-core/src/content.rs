@@ -262,7 +262,7 @@ impl Page {
         // Generate summary if not provided
         let summary = fm.description.clone().or_else(|| {
             // Take first paragraph or first 160 chars
-            let plain_text = strip_html(&content.html);
+            let plain_text = crate::utils::strip_html(&content.html);
             Some(truncate_at_word_boundary(&plain_text, 160))
         });
 
@@ -291,23 +291,6 @@ impl Page {
             source_path: Some(content_path.path.clone()),
         }
     }
-}
-
-/// Strip HTML tags from content.
-fn strip_html(html: &str) -> String {
-    let mut result = String::new();
-    let mut in_tag = false;
-
-    for c in html.chars() {
-        match c {
-            '<' => in_tag = true,
-            '>' => in_tag = false,
-            _ if !in_tag => result.push(c),
-            _ => {}
-        }
-    }
-
-    result
 }
 
 /// Truncate text at word boundary, respecting UTF-8 character boundaries.
@@ -422,15 +405,6 @@ mod tests {
         assert_eq!(cp.canonical_id, "docs/guide");
         assert_eq!(cp.slug, "docs/guide");
         assert_eq!(cp.content_type, ContentType::Typst);
-    }
-
-    #[test]
-    fn test_strip_html() {
-        assert_eq!(
-            strip_html("<p>Hello <strong>World</strong></p>"),
-            "Hello World"
-        );
-        assert_eq!(strip_html("No tags here"), "No tags here");
     }
 
     #[test]

@@ -7,7 +7,7 @@ use std::{collections::HashMap, fs, path::Path};
 
 use serde::{Deserialize, Serialize};
 use tracing::info;
-use typstify_core::Page;
+use typstify_core::{Page, utils::strip_html};
 
 use crate::SearchError;
 
@@ -309,25 +309,6 @@ fn normalize_term(term: &str) -> String {
     term.to_lowercase().trim().to_string()
 }
 
-/// Strip HTML tags from content.
-fn strip_html(html: &str) -> String {
-    let mut result = String::with_capacity(html.len());
-    let mut in_tag = false;
-
-    for c in html.chars() {
-        if c == '<' {
-            in_tag = true;
-        } else if c == '>' {
-            in_tag = false;
-            result.push(' ');
-        } else if !in_tag {
-            result.push(c);
-        }
-    }
-
-    result
-}
-
 #[cfg(test)]
 mod tests {
     use chrono::Utc;
@@ -397,15 +378,6 @@ mod tests {
         // Not CJK
         assert!(!is_cjk_char('a'));
         assert!(!is_cjk_char('1'));
-    }
-
-    #[test]
-    fn test_strip_html() {
-        let html = "<p>Hello <strong>world</strong>!</p>";
-        let text = strip_html(html);
-        assert!(text.contains("Hello"));
-        assert!(text.contains("world"));
-        assert!(!text.contains("<p>"));
     }
 
     #[test]

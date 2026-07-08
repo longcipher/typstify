@@ -61,16 +61,16 @@ pub struct TaxonomyIndex {
 
 /// Content collector that walks directories and parses files.
 #[derive(Debug)]
-pub struct ContentCollector {
-    config: Config,
+pub struct ContentCollector<'a> {
+    config: &'a Config,
     parser: ParserRegistry,
     content_dir: PathBuf,
 }
 
-impl ContentCollector {
+impl<'a> ContentCollector<'a> {
     /// Create a new content collector.
     #[must_use]
-    pub fn new(config: Config, content_dir: impl Into<PathBuf>) -> Self {
+    pub fn new(config: &'a Config, content_dir: impl Into<PathBuf>) -> Self {
         Self {
             config,
             parser: ParserRegistry::new(),
@@ -243,7 +243,7 @@ impl ContentCollector {
     }
 
     /// Get pages for a specific section, sorted by date.
-    pub fn section_pages<'a>(content: &'a SiteContent, section: &str) -> Vec<&'a Page> {
+    pub fn section_pages<'b>(content: &'b SiteContent, section: &str) -> Vec<&'b Page> {
         let mut pages: Vec<_> = content
             .sections
             .get(section)
@@ -260,11 +260,11 @@ impl ContentCollector {
     }
 
     /// Get pages for a taxonomy term, sorted by date.
-    pub fn taxonomy_pages<'a>(
-        content: &'a SiteContent,
+    pub fn taxonomy_pages<'b>(
+        content: &'b SiteContent,
         taxonomy: &str,
         term: &str,
-    ) -> Vec<&'a Page> {
+    ) -> Vec<&'b Page> {
         let urls = match taxonomy {
             "tags" => content.taxonomies.tags.get(term),
             "categories" => content.taxonomies.categories.get(term),
@@ -302,30 +302,9 @@ pub fn paginate<T>(items: &[T], page: usize, per_page: usize) -> (&[T], usize) {
 mod tests {
     use std::collections::HashMap;
 
-    use super::*;
+    use typstify_core::test_fixtures::test_config;
 
-    #[allow(dead_code)]
-    fn test_config() -> Config {
-        Config {
-            site: typstify_core::config::SiteConfig {
-                title: "Test Site".to_string(),
-                host: "https://example.com".to_string(),
-                base_path: String::new(),
-                default_language: "en".to_string(),
-                description: None,
-                author: None,
-            },
-            languages: HashMap::new(),
-            build: typstify_core::config::BuildConfig {
-                drafts: false,
-                ..Default::default()
-            },
-            search: typstify_core::config::SearchConfig::default(),
-            rss: typstify_core::config::RssConfig::default(),
-            robots: typstify_core::config::RobotsConfig::default(),
-            taxonomies: typstify_core::config::TaxonomyConfig::default(),
-        }
-    }
+    use super::*;
 
     #[test]
     fn test_paginate() {
@@ -367,5 +346,176 @@ mod tests {
         assert!(content.pages.is_empty());
         assert!(content.sections.is_empty());
         assert!(content.taxonomies.tags.is_empty());
+    }
+
+    fn testdata_dir() -> PathBuf {
+        Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("testdata")
+            .join("content")
+    }
+
+    #[test]
+    fn collect_returns_correct_page_count() {
+        let config = test_config();
+        let collector = ContentCollector::new(&config, testdata_dir());
+        let content = collector.collect().expect("collect should succeed");
+
+        // 5 content files in testdata: hello-world.md, hello-world.zh.md,
+        // getting-started.md, about.md, technical-spec.typ
+        assert_eq!(content.pages.len(), 5);
+    }
+
+    #[test]
+    fn collect_assigns_pages_to_correct_sections() {
+        let config = test_config();
+        let collector = ContentCollector::new(&config, testdata_dir());
+        let content = collector.collect().expect("collect should succeed");
+
+        // "posts" section should have 2 default-language pages (hello-world, getting-started)
+        let posts = content
+            .sections
+            .get("posts")
+            .expect("posts section should exist");
+        assert_eq!(posts.len(), 2);
+        assert!(posts.contains(&"/posts/hello-world".to_string()));
+        assert!(posts.contains(&"/posts/getting-started".to_string()));
+
+        // The zh translation is filed under "zh" section (first URL path component)
+        let zh = content.sections.get("zh").expect("zh section should exist");
+        assert!(zh.contains(&"/zh/posts/hello-world".to_string()));
+
+        // "about" section should have 1 page
+        let about = content
+            .sections
+            .get("about")
+            .expect("about section should exist");
+        assert_eq!(about.len(), 1);
+        assert!(about.contains(&"/about".to_string()));
+
+        // "docs" section should have 1 page
+        let docs = content
+            .sections
+            .get("docs")
+            .expect("docs section should exist");
+        assert_eq!(docs.len(), 1);
+        assert!(docs.contains(&"/docs/technical-spec".to_string()));
+    }
+
+    #[test]
+    fn collect_builds_translation_groups() {
+        let config = test_config();
+        let collector = ContentCollector::new(&config, testdata_dir());
+        let content = collector.collect().expect("collect should succeed");
+
+        // hello-world.md and hello-world.zh.md share canonical_id "posts/hello-world"
+        let group = content
+            .translations
+            .get("posts/hello-world")
+            .expect("translation group should exist");
+        assert_eq!(group.len(), 2);
+        assert!(group.contains(&"/posts/hello-world".to_string()));
+        assert!(group.contains(&"/zh/posts/hello-world".to_string()));
+    }
+
+    #[test]
+    fn collect_indexes_taxonomy_entries() {
+        let config = test_config();
+        let collector = ContentCollector::new(&config, testdata_dir());
+        let content = collector.collect().expect("collect should succeed");
+
+        // hello-world.md has tags ["intro", "welcome"]
+        let intro_pages = content
+            .taxonomies
+            .tags
+            .get("intro")
+            .expect("'intro' tag should exist");
+        assert!(intro_pages.contains(&"/posts/hello-world".to_string()));
+
+        let welcome_pages = content
+            .taxonomies
+            .tags
+            .get("welcome")
+            .expect("'welcome' tag should exist");
+        assert!(welcome_pages.contains(&"/posts/hello-world".to_string()));
+
+        // getting-started.md has tags ["tutorial", "beginner"]
+        assert!(content.taxonomies.tags.contains_key("tutorial"));
+        assert!(content.taxonomies.tags.contains_key("beginner"));
+
+        // technical-spec.typ has tags ["typst", "technical", "spec"]
+        assert!(content.taxonomies.tags.contains_key("typst"));
+        assert!(content.taxonomies.tags.contains_key("technical"));
+        assert!(content.taxonomies.tags.contains_key("spec"));
+    }
+
+    #[test]
+    fn collect_excludes_drafts_when_config_disallows() {
+        let tmpdir = tempfile::tempdir().expect("create temp dir");
+        let content_dir = tmpdir.path().join("content");
+        let posts_dir = content_dir.join("posts");
+        fs::create_dir_all(&posts_dir).expect("create posts dir");
+
+        // Write a draft page
+        let draft_content = "---\ntitle: \"Draft Post\"\ndate: 2024-01-01T00:00:00Z\ndraft: true\ntags: []\n---\nThis is a draft.\n";
+        fs::write(posts_dir.join("draft-post.md"), draft_content).expect("write draft file");
+
+        // Write a published page
+        let published_content = "---\ntitle: \"Published Post\"\ndate: 2024-01-01T00:00:00Z\ndraft: false\ntags: []\n---\nThis is published.\n";
+        fs::write(posts_dir.join("published-post.md"), published_content)
+            .expect("write published file");
+
+        // With drafts disabled (default)
+        let config = test_config();
+        let collector = ContentCollector::new(&config, &content_dir);
+        let content = collector.collect().expect("collect should succeed");
+
+        assert_eq!(
+            content.pages.len(),
+            1,
+            "only published page should be collected"
+        );
+        assert!(
+            content.pages.contains_key("/posts/published-post"),
+            "published page should be present"
+        );
+        assert!(
+            !content.pages.contains_key("/posts/draft-post"),
+            "draft page should be excluded"
+        );
+
+        // With drafts enabled
+        let config_with_drafts = Config::from_parts(
+            typstify_core::config::SiteConfig {
+                title: "Test Site".to_string(),
+                host: "https://example.com".to_string(),
+                base_path: String::new(),
+                default_language: "en".to_string(),
+                description: None,
+                author: None,
+            },
+            typstify_core::config::BuildConfig {
+                drafts: true,
+                ..Default::default()
+            },
+            typstify_core::config::SearchConfig::default(),
+            typstify_core::config::RssConfig::default(),
+            typstify_core::config::RobotsConfig::default(),
+            typstify_core::config::TaxonomyConfig::default(),
+            HashMap::new(),
+        );
+        let collector_with_drafts = ContentCollector::new(&config_with_drafts, &content_dir);
+        let content_with_drafts = collector_with_drafts
+            .collect()
+            .expect("collect should succeed");
+
+        assert_eq!(
+            content_with_drafts.pages.len(),
+            2,
+            "both pages should be collected when drafts enabled"
+        );
+        assert!(
+            content_with_drafts.pages.contains_key("/posts/draft-post"),
+            "draft page should be included when drafts enabled"
+        );
     }
 }

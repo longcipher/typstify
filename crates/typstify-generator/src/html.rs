@@ -7,7 +7,10 @@ use std::path::{Path, PathBuf};
 use chrono::{Datelike, Utc};
 use thiserror::Error;
 use tracing::debug;
-use typstify_core::{Config, Page};
+use typstify_core::{
+    Config, Page,
+    utils::{html_escape, slugify},
+};
 
 use crate::template::{Template, TemplateContext, TemplateError, TemplateRegistry};
 
@@ -32,17 +35,17 @@ pub type Result<T> = std::result::Result<T, HtmlError>;
 
 /// HTML page generator.
 #[derive(Debug)]
-pub struct HtmlGenerator {
+pub struct HtmlGenerator<'a> {
     templates: TemplateRegistry,
-    config: Config,
+    config: &'a Config,
     /// Content sections for dynamic navigation (e.g., "posts", "shorts").
     sections: Vec<String>,
 }
 
-impl HtmlGenerator {
+impl<'a> HtmlGenerator<'a> {
     /// Create a new HTML generator with the given configuration.
     #[must_use]
-    pub fn new(config: Config) -> Self {
+    pub fn new(config: &'a Config) -> Self {
         Self {
             templates: TemplateRegistry::new(),
             config,
@@ -52,7 +55,7 @@ impl HtmlGenerator {
 
     /// Create a generator with custom templates.
     #[must_use]
-    pub fn with_templates(config: Config, templates: TemplateRegistry) -> Self {
+    pub fn with_templates(config: &'a Config, templates: TemplateRegistry) -> Self {
         Self {
             templates,
             config,
@@ -100,9 +103,12 @@ impl HtmlGenerator {
                 let title = section
                     .chars()
                     .next()
-                    .map(|c| c.to_uppercase().collect::<String>() + &section[1..])
+                    .map(|c| c.to_uppercase().collect::<String>() + &section[c.len_utf8()..])
                     .unwrap_or_else(|| (*section).clone());
-                format!(r#"<a href="{base_path}{lang_prefix}/{section}">{title}</a>"#)
+                format!(
+                    r#"<a href="{base_path}{lang_prefix}/{section}">{}</a>"#,
+                    html_escape(&title)
+                )
             })
             .collect::<Vec<_>>()
             .join("\n                    ")
@@ -162,28 +168,14 @@ impl HtmlGenerator {
 
         let inner_html = self.templates.render("list", &ctx)?;
 
-        // Get the base path for subdirectory deployments
-        let base_path = self.config.base_path();
-
-        // Wrap in base template
-        let base_ctx = TemplateContext::new()
-            .with_var("lang", &self.config.site.default_language)
-            .with_var("title", title)
-            .with_var("base_path", base_path)
-            .with_var(
-                "site_title_suffix",
-                format!(" | {}", self.config.site.title),
-            )
-            .with_var("canonical_url", self.config.base_url())
-            .with_var("content", &inner_html)
-            .with_var("site_title", &self.config.site.title)
-            .with_var("year", Utc::now().year().to_string())
-            // Navigation URLs
-            .with_var("nav_home_url", format!("{base_path}/"))
-            .with_var("nav_archives_url", format!("{base_path}/archives"))
-            .with_var("nav_tags_url", format!("{base_path}/tags"))
-            .with_var("nav_about_url", format!("{base_path}/about"))
-            .with_var("section_nav", self.generate_section_nav(base_path, ""));
+        let base_url = self.config.base_url();
+        let base_ctx = self.build_shared_base_ctx(
+            &self.config.site.default_language,
+            title,
+            base_url,
+            &inner_html,
+            "",
+        );
 
         Ok(self.templates.render("base", &base_ctx)?)
     }
@@ -208,38 +200,53 @@ impl HtmlGenerator {
         let inner_html = self.templates.render("taxonomy", &ctx)?;
         let title = format!("{taxonomy_name}: {term}");
 
-        // Get the base path for subdirectory deployments
-        let base_path = self.config.base_path();
+        let base_url = self.config.base_url();
+        let canonical_url = format!("{}/{}/{}", base_url, taxonomy_name.to_lowercase(), term);
 
-        // Wrap in base template
-        let base_ctx = TemplateContext::new()
-            .with_var("lang", &self.config.site.default_language)
-            .with_var("title", &title)
+        let base_ctx = self.build_shared_base_ctx(
+            &self.config.site.default_language,
+            &title,
+            &canonical_url,
+            &inner_html,
+            "",
+        );
+
+        Ok(self.templates.render("base", &base_ctx)?)
+    }
+
+    /// Build shared base template context with common navigation variables.
+    fn build_shared_base_ctx(
+        &self,
+        lang: &str,
+        title: &str,
+        canonical_url: &str,
+        content: &str,
+        lang_prefix: &str,
+    ) -> TemplateContext {
+        let base_path = self.config.base_path();
+        TemplateContext::new()
+            .with_var("lang", lang)
+            .with_var("title", title)
             .with_var("base_path", base_path)
             .with_var(
                 "site_title_suffix",
-                format!(" | {}", self.config.site.title),
+                format!(" | {}", self.config.title_for_language(lang)),
             )
-            .with_var(
-                "canonical_url",
-                format!(
-                    "{}/{}/{}",
-                    self.config.base_url(),
-                    taxonomy_name.to_lowercase(),
-                    term
-                ),
-            )
-            .with_var("content", &inner_html)
-            .with_var("site_title", &self.config.site.title)
+            .with_var("canonical_url", canonical_url)
+            .with_var("content", content)
+            .with_var("site_title", self.config.title_for_language(lang))
             .with_var("year", Utc::now().year().to_string())
-            // Navigation URLs
-            .with_var("nav_home_url", format!("{base_path}/"))
-            .with_var("nav_archives_url", format!("{base_path}/archives"))
-            .with_var("nav_tags_url", format!("{base_path}/tags"))
-            .with_var("nav_about_url", format!("{base_path}/about"))
-            .with_var("section_nav", self.generate_section_nav(base_path, ""));
-
-        Ok(self.templates.render("base", &base_ctx)?)
+            .with_var("nav_home_url", format!("{base_path}{lang_prefix}/"))
+            .with_var(
+                "nav_archives_url",
+                format!("{base_path}{lang_prefix}/archives"),
+            )
+            .with_var("nav_tags_url", format!("{base_path}{lang_prefix}/tags"))
+            .with_var("nav_about_url", format!("{base_path}{lang_prefix}/about"))
+            .with_var(
+                "section_nav",
+                self.generate_section_nav(base_path, lang_prefix),
+            )
     }
 
     /// Build template context for page content.
@@ -279,7 +286,7 @@ impl HtmlGenerator {
                 .map(|tag| {
                     format!(
                         r#"<a href="{base_path}{lang_prefix}/tags/{}" rel="tag">{}</a>"#,
-                        slug_from_str(tag),
+                        slugify(tag),
                         tag
                     )
                 })
@@ -301,44 +308,21 @@ impl HtmlGenerator {
         inner_html: &str,
         alternates: &[(&str, &str)],
     ) -> Result<TemplateContext> {
-        // Get the base path for subdirectory deployments (e.g., "/typstify")
-        let base_path = self.config.base_path();
-
-        // Determine language prefix for URLs
         let lang_prefix = if page.is_default_lang {
             String::new()
         } else {
             format!("/{}", page.lang)
         };
 
-        let mut ctx = TemplateContext::new()
-            .with_var("lang", &page.lang)
-            .with_var("title", &page.title)
-            .with_var("base_path", base_path)
-            .with_var(
-                "site_title_suffix",
-                format!(" | {}", self.config.title_for_language(&page.lang)),
-            )
-            .with_var(
-                "canonical_url",
-                format!("{}{}", self.config.base_url(), page.url),
-            )
-            .with_var("content", inner_html)
-            .with_var("site_title", self.config.title_for_language(&page.lang))
-            .with_var("year", Utc::now().year().to_string())
-            // Navigation URLs with base path and language prefix
-            .with_var("nav_home_url", format!("{base_path}{lang_prefix}/"))
-            .with_var(
-                "nav_archives_url",
-                format!("{base_path}{lang_prefix}/archives"),
-            )
-            .with_var("nav_tags_url", format!("{base_path}{lang_prefix}/tags"))
-            .with_var("nav_about_url", format!("{base_path}{lang_prefix}/about"))
-            // Dynamic section navigation
-            .with_var(
-                "section_nav",
-                self.generate_section_nav(base_path, &lang_prefix),
-            );
+        let canonical_url = format!("{}{}", self.config.base_url(), page.url);
+
+        let mut ctx = self.build_shared_base_ctx(
+            &page.lang,
+            &page.title,
+            &canonical_url,
+            inner_html,
+            &lang_prefix,
+        );
 
         // Add description if present
         if let Some(desc) = &page.description {
@@ -487,8 +471,8 @@ impl HtmlGenerator {
             .map(|(tag, pages)| {
                 format!(
                     r#"<a href="{base_path}{lang_prefix}/tags/{}" class="tag-item"><span class="tag-name">{}</span><span class="tag-count">{}</span></a>"#,
-                    slug_from_str(tag),
-                    tag,
+                    slugify(tag),
+                    html_escape(tag),
                     pages.len()
                 )
             })
@@ -498,33 +482,10 @@ impl HtmlGenerator {
         let ctx = TemplateContext::new().with_var("items", &items_html);
         let inner_html = self.templates.render("tags_index", &ctx)?;
 
-        let mut base_ctx = TemplateContext::new()
-            .with_var("lang", lang)
-            .with_var("title", "Tags")
-            .with_var("base_path", base_path)
-            .with_var(
-                "site_title_suffix",
-                format!(" | {}", self.config.title_for_language(lang)),
-            )
-            .with_var(
-                "canonical_url",
-                format!("{}{}/tags", self.config.base_url(), lang_prefix),
-            )
-            .with_var("content", &inner_html)
-            .with_var("site_title", self.config.title_for_language(lang))
-            .with_var("year", Utc::now().year().to_string())
-            // Navigation URLs
-            .with_var("nav_home_url", format!("{base_path}{lang_prefix}/"))
-            .with_var(
-                "nav_archives_url",
-                format!("{base_path}{lang_prefix}/archives"),
-            )
-            .with_var("nav_tags_url", format!("{base_path}{lang_prefix}/tags"))
-            .with_var("nav_about_url", format!("{base_path}{lang_prefix}/about"))
-            .with_var(
-                "section_nav",
-                self.generate_section_nav(base_path, &lang_prefix),
-            );
+        let canonical_url = format!("{}{}/tags", self.config.base_url(), lang_prefix);
+
+        let mut base_ctx =
+            self.build_shared_base_ctx(lang, "Tags", &canonical_url, &inner_html, &lang_prefix);
 
         // Generate language switcher
         let lang_switcher = self.generate_lang_switcher(lang, "tags");
@@ -559,8 +520,8 @@ impl HtmlGenerator {
             .map(|(category, pages)| {
                 format!(
                     r#"<li><a href="{base_path}{lang_prefix}/categories/{}">{}</a> <span class="count">({})</span></li>"#,
-                    slug_from_str(category),
-                    category,
+                    slugify(category),
+                    html_escape(category),
                     pages.len()
                 )
             })
@@ -570,33 +531,15 @@ impl HtmlGenerator {
         let ctx = TemplateContext::new().with_var("items", &items_html);
         let inner_html = self.templates.render("categories_index", &ctx)?;
 
-        let mut base_ctx = TemplateContext::new()
-            .with_var("lang", lang)
-            .with_var("title", "Categories")
-            .with_var("base_path", base_path)
-            .with_var(
-                "site_title_suffix",
-                format!(" | {}", self.config.title_for_language(lang)),
-            )
-            .with_var(
-                "canonical_url",
-                format!("{}{}/categories", self.config.base_url(), lang_prefix),
-            )
-            .with_var("content", &inner_html)
-            .with_var("site_title", self.config.title_for_language(lang))
-            .with_var("year", Utc::now().year().to_string())
-            // Navigation URLs
-            .with_var("nav_home_url", format!("{base_path}{lang_prefix}/"))
-            .with_var(
-                "nav_archives_url",
-                format!("{base_path}{lang_prefix}/archives"),
-            )
-            .with_var("nav_tags_url", format!("{base_path}{lang_prefix}/tags"))
-            .with_var("nav_about_url", format!("{base_path}{lang_prefix}/about"))
-            .with_var(
-                "section_nav",
-                self.generate_section_nav(base_path, &lang_prefix),
-            );
+        let canonical_url = format!("{}{}/categories", self.config.base_url(), lang_prefix);
+
+        let mut base_ctx = self.build_shared_base_ctx(
+            lang,
+            "Categories",
+            &canonical_url,
+            &inner_html,
+            &lang_prefix,
+        );
 
         // Generate language switcher
         let lang_switcher = self.generate_lang_switcher(lang, "categories");
@@ -655,7 +598,7 @@ impl HtmlGenerator {
                         };
                         format!(
                             r#"<li><span class="archive-date">{}</span><span class="archive-badge {}">{}</span><a href="{}">{}</a></li>"#,
-                            date_str, badge_class, badge_label, p.url, p.title
+                            date_str, badge_class, badge_label, html_escape(&p.url), html_escape(&p.title)
                         )
                     })
                     .collect::<Vec<_>>()
@@ -669,36 +612,10 @@ impl HtmlGenerator {
         let ctx = TemplateContext::new().with_var("items", &items_html);
         let inner_html = self.templates.render("archives", &ctx)?;
 
-        // Get the base path for subdirectory deployments
-        let base_path = self.config.base_path();
+        let canonical_url = format!("{}{}/archives", self.config.base_url(), lang_prefix);
 
-        let mut base_ctx = TemplateContext::new()
-            .with_var("lang", lang)
-            .with_var("title", "Archives")
-            .with_var("base_path", base_path)
-            .with_var(
-                "site_title_suffix",
-                format!(" | {}", self.config.title_for_language(lang)),
-            )
-            .with_var(
-                "canonical_url",
-                format!("{}{}/archives", self.config.base_url(), lang_prefix),
-            )
-            .with_var("content", &inner_html)
-            .with_var("site_title", self.config.title_for_language(lang))
-            .with_var("year", Utc::now().year().to_string())
-            // Navigation URLs
-            .with_var("nav_home_url", format!("{base_path}{lang_prefix}/"))
-            .with_var(
-                "nav_archives_url",
-                format!("{base_path}{lang_prefix}/archives"),
-            )
-            .with_var("nav_tags_url", format!("{base_path}{lang_prefix}/tags"))
-            .with_var("nav_about_url", format!("{base_path}{lang_prefix}/about"))
-            .with_var(
-                "section_nav",
-                self.generate_section_nav(base_path, &lang_prefix),
-            );
+        let mut base_ctx =
+            self.build_shared_base_ctx(lang, "Archives", &canonical_url, &inner_html, &lang_prefix);
 
         // Generate language switcher
         let lang_switcher = self.generate_lang_switcher(lang, "archives");
@@ -746,36 +663,10 @@ impl HtmlGenerator {
 
         let inner_html = self.templates.render("section", &ctx)?;
 
-        // Get the base path for subdirectory deployments
-        let base_path = self.config.base_path();
+        let canonical_url = format!("{}{}/{}", self.config.base_url(), lang_prefix, section);
 
-        let mut base_ctx = TemplateContext::new()
-            .with_var("lang", lang)
-            .with_var("title", &title)
-            .with_var("base_path", base_path)
-            .with_var(
-                "site_title_suffix",
-                format!(" | {}", self.config.title_for_language(lang)),
-            )
-            .with_var(
-                "canonical_url",
-                format!("{}{}/{}", self.config.base_url(), lang_prefix, section),
-            )
-            .with_var("content", &inner_html)
-            .with_var("site_title", self.config.title_for_language(lang))
-            .with_var("year", Utc::now().year().to_string())
-            // Navigation URLs
-            .with_var("nav_home_url", format!("{base_path}{lang_prefix}/"))
-            .with_var(
-                "nav_archives_url",
-                format!("{base_path}{lang_prefix}/archives"),
-            )
-            .with_var("nav_tags_url", format!("{base_path}{lang_prefix}/tags"))
-            .with_var("nav_about_url", format!("{base_path}{lang_prefix}/about"))
-            .with_var(
-                "section_nav",
-                self.generate_section_nav(base_path, &lang_prefix),
-            );
+        let mut base_ctx =
+            self.build_shared_base_ctx(lang, &title, &canonical_url, &inner_html, &lang_prefix);
 
         // Generate language switcher
         let lang_switcher = self.generate_lang_switcher(lang, section);
@@ -824,36 +715,10 @@ impl HtmlGenerator {
         // Use shorts template
         let inner_html = self.templates.render("shorts", &ctx)?;
 
-        // Get the base path for subdirectory deployments
-        let base_path = self.config.base_path();
+        let canonical_url = format!("{}{}/{}", self.config.base_url(), lang_prefix, section);
 
-        let mut base_ctx = TemplateContext::new()
-            .with_var("lang", lang)
-            .with_var("title", &title)
-            .with_var("base_path", base_path)
-            .with_var(
-                "site_title_suffix",
-                format!(" | {}", self.config.title_for_language(lang)),
-            )
-            .with_var(
-                "canonical_url",
-                format!("{}{}/{}", self.config.base_url(), lang_prefix, section),
-            )
-            .with_var("content", &inner_html)
-            .with_var("site_title", self.config.title_for_language(lang))
-            .with_var("year", Utc::now().year().to_string())
-            // Navigation URLs
-            .with_var("nav_home_url", format!("{base_path}{lang_prefix}/"))
-            .with_var(
-                "nav_archives_url",
-                format!("{base_path}{lang_prefix}/archives"),
-            )
-            .with_var("nav_tags_url", format!("{base_path}{lang_prefix}/tags"))
-            .with_var("nav_about_url", format!("{base_path}{lang_prefix}/about"))
-            .with_var(
-                "section_nav",
-                self.generate_section_nav(base_path, &lang_prefix),
-            );
+        let mut base_ctx =
+            self.build_shared_base_ctx(lang, &title, &canonical_url, &inner_html, &lang_prefix);
 
         // Generate language switcher
         let lang_switcher = self.generate_lang_switcher(lang, section);
@@ -863,18 +728,6 @@ impl HtmlGenerator {
 
         Ok(self.templates.render("base", &base_ctx)?)
     }
-}
-
-/// Generate a URL-safe slug from a string.
-fn slug_from_str(s: &str) -> String {
-    s.to_lowercase()
-        .chars()
-        .map(|c| if c.is_alphanumeric() { c } else { '-' })
-        .collect::<String>()
-        .split('-')
-        .filter(|s| !s.is_empty())
-        .collect::<Vec<_>>()
-        .join("-")
 }
 
 /// Generate HTML for a list item (used in list pages).
@@ -894,7 +747,7 @@ pub fn list_item_html(page: &Page) -> String {
         .description
         .as_ref()
         .filter(|d| !d.is_empty())
-        .map(|d| format!(r#"<p class="post-description">{d}</p>"#))
+        .map(|d| format!(r#"<p class="post-description">{}</p>"#, html_escape(d)))
         .unwrap_or_default();
 
     format!(
@@ -905,7 +758,10 @@ pub fn list_item_html(page: &Page) -> String {
     </div>
     {}
 </li>"#,
-        page.url, page.title, date_html, description_html
+        html_escape(&page.url),
+        html_escape(&page.title),
+        date_html,
+        description_html
     )
 }
 
@@ -997,57 +853,14 @@ pub fn pagination_html(current: usize, total: usize, base_url: &str) -> Option<S
 mod tests {
     use std::collections::HashMap;
 
+    use typstify_core::test_fixtures::{test_config, test_page};
+
     use super::*;
-
-    fn test_config() -> Config {
-        Config {
-            site: typstify_core::config::SiteConfig {
-                title: "Test Site".to_string(),
-                host: "https://example.com".to_string(),
-                base_path: String::new(),
-                default_language: "en".to_string(),
-                description: Some("A test site".to_string()),
-                author: Some("Test Author".to_string()),
-            },
-            languages: HashMap::new(),
-            build: typstify_core::config::BuildConfig::default(),
-            search: typstify_core::config::SearchConfig::default(),
-            rss: typstify_core::config::RssConfig::default(),
-            robots: typstify_core::config::RobotsConfig::default(),
-            taxonomies: typstify_core::config::TaxonomyConfig::default(),
-        }
-    }
-
-    fn test_page() -> Page {
-        Page {
-            url: "/test-page".to_string(),
-            title: "Test Page".to_string(),
-            description: Some("A test page".to_string()),
-            date: None,
-            updated: None,
-            draft: false,
-            lang: "en".to_string(),
-            is_default_lang: true,
-            canonical_id: "test-page".to_string(),
-            tags: vec![],
-            categories: vec![],
-            content: "<p>Hello, World!</p>".to_string(),
-            summary: None,
-            reading_time: None,
-            word_count: None,
-            toc: vec![],
-            custom_js: vec![],
-            custom_css: vec![],
-            aliases: vec![],
-            template: None,
-            weight: 0,
-            source_path: Some(PathBuf::from("test-page.md")),
-        }
-    }
 
     #[test]
     fn test_generate_page() {
-        let generator = HtmlGenerator::new(test_config());
+        let config = test_config();
+        let generator = HtmlGenerator::new(&config);
         let page = test_page();
 
         let html = generator.generate_page(&page, &[]).unwrap();
@@ -1060,7 +873,8 @@ mod tests {
 
     #[test]
     fn test_generate_redirect() {
-        let generator = HtmlGenerator::new(test_config());
+        let config = test_config();
+        let generator = HtmlGenerator::new(&config);
 
         let html = generator
             .generate_redirect("https://example.com/new-url")
@@ -1069,14 +883,6 @@ mod tests {
         assert!(html.contains("Redirecting"));
         assert!(html.contains("https://example.com/new-url"));
         assert!(html.contains(r#"http-equiv="refresh""#));
-    }
-
-    #[test]
-    fn test_slug_from_str() {
-        assert_eq!(slug_from_str("Hello World"), "hello-world");
-        assert_eq!(slug_from_str("Rust & Go"), "rust-go");
-        assert_eq!(slug_from_str("  multiple   spaces  "), "multiple-spaces");
-        assert_eq!(slug_from_str("CamelCase"), "camelcase");
     }
 
     #[test]
@@ -1116,7 +922,8 @@ mod tests {
 
     #[test]
     fn test_output_path() {
-        let generator = HtmlGenerator::new(test_config());
+        let config = test_config();
+        let generator = HtmlGenerator::new(&config);
         let output_dir = Path::new("public");
 
         let page = test_page();
@@ -1128,5 +935,228 @@ mod tests {
         root_page.url = "/".to_string();
         let path = generator.output_path(&root_page, output_dir);
         assert_eq!(path, PathBuf::from("public/index.html"));
+    }
+
+    #[test]
+    fn test_generate_list_page() {
+        let config = test_config();
+        let generator = HtmlGenerator::new(&config);
+
+        let html = generator
+            .generate_list_page("My Posts", "<li>Post 1</li>", None)
+            .unwrap();
+
+        assert!(html.contains("<!DOCTYPE html>"));
+        assert!(html.contains("My Posts"));
+        assert!(html.contains("<li>Post 1</li>"));
+        assert!(html.contains("post-list"));
+    }
+
+    #[test]
+    fn test_generate_list_page_with_pagination() {
+        let config = test_config();
+        let generator = HtmlGenerator::new(&config);
+
+        let pagination = r#"<nav class="pagination">Page 1 of 3</nav>"#;
+        let html = generator
+            .generate_list_page("Blog", "<li>Item</li>", Some(pagination))
+            .unwrap();
+
+        assert!(html.contains("Blog"));
+        assert!(html.contains(r#"<nav class="pagination">"#));
+        assert!(html.contains("Page 1 of 3"));
+    }
+
+    #[test]
+    fn test_generate_taxonomy_page() {
+        let config = test_config();
+        let generator = HtmlGenerator::new(&config);
+
+        let html = generator
+            .generate_taxonomy_page("Tags", "rust", "<li>Rust Post</li>", None)
+            .unwrap();
+
+        assert!(html.contains("<!DOCTYPE html>"));
+        assert!(html.contains("Tags"));
+        assert!(html.contains("rust"));
+        assert!(html.contains("<li>Rust Post</li>"));
+        assert!(html.contains("taxonomy"));
+    }
+
+    #[test]
+    fn test_generate_taxonomy_page_with_pagination() {
+        let config = test_config();
+        let generator = HtmlGenerator::new(&config);
+
+        let pagination = r#"<nav class="pagination">Page 2 of 5</nav>"#;
+        let html = generator
+            .generate_taxonomy_page(
+                "Categories",
+                "tutorial",
+                "<li>Tutorial Post</li>",
+                Some(pagination),
+            )
+            .unwrap();
+
+        assert!(html.contains("Categories"));
+        assert!(html.contains("tutorial"));
+        assert!(html.contains("Page 2 of 5"));
+    }
+
+    #[test]
+    fn test_generate_tags_index_page() {
+        let config = test_config();
+        let generator = HtmlGenerator::new(&config);
+
+        let mut tags = HashMap::new();
+        tags.insert(
+            "rust".to_string(),
+            vec!["page1".to_string(), "page2".to_string()],
+        );
+        tags.insert("web".to_string(), vec!["page3".to_string()]);
+
+        let html = generator.generate_tags_index_page(&tags, "en").unwrap();
+
+        assert!(html.contains("<!DOCTYPE html>"));
+        assert!(html.contains("Tags"));
+        assert!(html.contains("tag-item"));
+        assert!(html.contains("rust"));
+        assert!(html.contains("web"));
+        assert!(html.contains("tag-count"));
+        assert!(html.contains("tag-name"));
+    }
+
+    #[test]
+    fn test_generate_categories_index_page() {
+        let config = test_config();
+        let generator = HtmlGenerator::new(&config);
+
+        let mut categories = HashMap::new();
+        categories.insert(
+            "programming".to_string(),
+            vec!["p1".to_string(), "p2".to_string()],
+        );
+        categories.insert("design".to_string(), vec!["p3".to_string()]);
+
+        let html = generator
+            .generate_categories_index_page(&categories, "en")
+            .unwrap();
+
+        assert!(html.contains("<!DOCTYPE html>"));
+        assert!(html.contains("Categories"));
+        assert!(html.contains("programming"));
+        assert!(html.contains("design"));
+        assert!(html.contains("categories-list"));
+    }
+
+    #[test]
+    fn test_generate_archives_page() {
+        let config = test_config();
+        let generator = HtmlGenerator::new(&config);
+
+        let mut page = test_page();
+        page.date = Some(
+            chrono::NaiveDateTime::parse_from_str("2024-01-15T10:00:00", "%Y-%m-%dT%H:%M:%S")
+                .unwrap()
+                .and_utc(),
+        );
+        page.title = "January Post".to_string();
+
+        let html = generator.generate_archives_page(&[&page], "en").unwrap();
+
+        assert!(html.contains("<!DOCTYPE html>"));
+        assert!(html.contains("Archives"));
+        assert!(html.contains("archive-year"));
+        assert!(html.contains("2024"));
+        assert!(html.contains("January Post"));
+    }
+
+    #[test]
+    fn test_generate_archives_page_empty() {
+        let config = test_config();
+        let generator = HtmlGenerator::new(&config);
+
+        let html = generator.generate_archives_page(&[], "en").unwrap();
+
+        assert!(html.contains("<!DOCTYPE html>"));
+        assert!(html.contains("Archives"));
+    }
+
+    #[test]
+    fn test_generate_section_page() {
+        let config = test_config();
+        let generator = HtmlGenerator::new(&config);
+
+        let html = generator
+            .generate_section_page(
+                "posts",
+                Some("All blog posts"),
+                "<li>Post A</li>",
+                None,
+                "en",
+            )
+            .unwrap();
+
+        assert!(html.contains("<!DOCTYPE html>"));
+        assert!(html.contains("Posts"));
+        assert!(html.contains("All blog posts"));
+        assert!(html.contains("<li>Post A</li>"));
+        assert!(html.contains("section-list"));
+    }
+
+    #[test]
+    fn test_generate_section_page_with_pagination() {
+        let config = test_config();
+        let generator = HtmlGenerator::new(&config);
+
+        let pagination = r#"<nav class="pagination">Page 1 of 2</nav>"#;
+        let html = generator
+            .generate_section_page("tutorials", None, "<li>Tut 1</li>", Some(pagination), "en")
+            .unwrap();
+
+        assert!(html.contains("Tutorials"));
+        assert!(html.contains("Page 1 of 2"));
+    }
+
+    #[test]
+    fn test_generate_shorts_page() {
+        let config = test_config();
+        let generator = HtmlGenerator::new(&config);
+
+        let html = generator
+            .generate_shorts_page(
+                "shorts",
+                Some("Short-form content"),
+                "<div class=\"short-item\">Short 1</div>",
+                None,
+                "en",
+            )
+            .unwrap();
+
+        assert!(html.contains("<!DOCTYPE html>"));
+        assert!(html.contains("Shorts"));
+        assert!(html.contains("Short-form content"));
+        assert!(html.contains("Short 1"));
+        assert!(html.contains("shorts-section"));
+    }
+
+    #[test]
+    fn test_generate_shorts_page_with_pagination() {
+        let config = test_config();
+        let generator = HtmlGenerator::new(&config);
+
+        let pagination = r#"<nav class="pagination">Page 1 of 4</nav>"#;
+        let html = generator
+            .generate_shorts_page(
+                "notes",
+                None,
+                "<div class=\"short-item\">Note 1</div>",
+                Some(pagination),
+                "en",
+            )
+            .unwrap();
+
+        assert!(html.contains("Notes"));
+        assert!(html.contains("Page 1 of 4"));
     }
 }

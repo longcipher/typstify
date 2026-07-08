@@ -59,6 +59,10 @@ pub enum BuildError {
     /// Configuration error.
     #[error("config error: {0}")]
     Config(String),
+
+    /// Page generation failed.
+    #[error("page generation failed: {} errors", errors.len())]
+    PageGenerationFailed { errors: Vec<String> },
 }
 
 /// Result type for build operations.
@@ -133,7 +137,7 @@ impl Builder {
         self.clean_output()?;
 
         // 2. Collect content
-        let collector = ContentCollector::new(self.config.clone(), &self.content_dir);
+        let collector = ContentCollector::new(&self.config, &self.content_dir);
         let content = collector.collect()?;
 
         // 3. Extract sections for dynamic navigation
@@ -204,7 +208,7 @@ impl Builder {
 
     /// Generate HTML pages for all content.
     fn generate_pages(&self, content: &SiteContent, sections: &[String]) -> Result<usize> {
-        let generator = HtmlGenerator::new(self.config.clone()).with_sections(sections.to_vec());
+        let generator = HtmlGenerator::new(&self.config).with_sections(sections.to_vec());
         let pages: Vec<_> = content.pages.values().collect();
 
         info!(count = pages.len(), "generating HTML pages");
@@ -239,11 +243,19 @@ impl Builder {
 
         // Check for errors
         let mut count = 0;
+        let mut errors = Vec::new();
         for result in results {
             match result {
                 Ok(()) => count += 1,
-                Err(e) => warn!(error = %e, "failed to generate page"),
+                Err(e) => {
+                    warn!(error = %e, "failed to generate page");
+                    errors.push(e.to_string());
+                }
             }
+        }
+
+        if !errors.is_empty() {
+            return Err(BuildError::PageGenerationFailed { errors });
         }
 
         Ok(count)
@@ -251,7 +263,7 @@ impl Builder {
 
     /// Generate taxonomy (tag/category) pages.
     fn generate_taxonomy_pages(&self, content: &SiteContent, sections: &[String]) -> Result<usize> {
-        let generator = HtmlGenerator::new(self.config.clone()).with_sections(sections.to_vec());
+        let generator = HtmlGenerator::new(&self.config).with_sections(sections.to_vec());
         let per_page = self.config.taxonomies.tags.paginate;
         let mut count = 0;
 
@@ -337,7 +349,7 @@ impl Builder {
     /// Generate auto-generated index pages: archives, tags index, categories index, section indices.
     /// Generates per-language versions when multiple languages are configured.
     fn generate_auto_pages(&self, content: &SiteContent, sections: &[String]) -> Result<usize> {
-        let generator = HtmlGenerator::new(self.config.clone()).with_sections(sections.to_vec());
+        let generator = HtmlGenerator::new(&self.config).with_sections(sections.to_vec());
         let mut count = 0;
 
         // Get all languages
@@ -548,7 +560,7 @@ impl Builder {
 
     /// Generate redirect pages for URL aliases.
     fn generate_redirects(&self, content: &SiteContent) -> Result<usize> {
-        let generator = HtmlGenerator::new(self.config.clone());
+        let generator = HtmlGenerator::new(&self.config);
         let mut count = 0;
 
         for page in content.pages.values() {
@@ -574,7 +586,7 @@ impl Builder {
 
     /// Generate RSS feed.
     fn generate_rss(&self, content: &SiteContent) -> Result<()> {
-        let generator = RssGenerator::new(self.config.clone());
+        let generator = RssGenerator::new(&self.config);
         let pages = ContentCollector::pages_by_date(content);
 
         // Filter to only posts (pages with dates)
@@ -603,8 +615,7 @@ impl Builder {
 
             // Determine output path
             let lang_output_path = if *lang == default_lang.as_str() {
-                // For default language, still put at root but also in lang folder
-                self.output_dir.join(lang).join("rss.xml")
+                self.output_dir.join("rss.xml")
             } else {
                 self.output_dir.join(lang).join("rss.xml")
             };
@@ -623,7 +634,7 @@ impl Builder {
 
     /// Generate sitemap.
     fn generate_sitemap(&self, content: &SiteContent) -> Result<()> {
-        let generator = SitemapGenerator::new(self.config.clone());
+        let generator = SitemapGenerator::new(&self.config);
         let pages: Vec<_> = content.pages.values().collect();
 
         let xml = generator.generate(&pages)?;
@@ -642,7 +653,7 @@ impl Builder {
 
     /// Generate robots.txt.
     fn generate_robots(&self) -> Result<()> {
-        let generator = RobotsGenerator::new(self.config.clone());
+        let generator = RobotsGenerator::new(&self.config);
         generator.generate(&self.output_dir)?;
         Ok(())
     }
@@ -712,30 +723,9 @@ mod tests {
     use std::collections::HashMap;
 
     use tempfile::TempDir;
+    use typstify_core::test_fixtures::test_config;
 
     use super::*;
-
-    fn test_config() -> Config {
-        Config {
-            site: typstify_core::config::SiteConfig {
-                title: "Test Site".to_string(),
-                host: "https://example.com".to_string(),
-                base_path: String::new(),
-                default_language: "en".to_string(),
-                description: None,
-                author: None,
-            },
-            languages: HashMap::new(),
-            build: typstify_core::config::BuildConfig::default(),
-            search: typstify_core::config::SearchConfig::default(),
-            rss: typstify_core::config::RssConfig {
-                enabled: true,
-                limit: 20,
-            },
-            robots: typstify_core::config::RobotsConfig::default(),
-            taxonomies: typstify_core::config::TaxonomyConfig::default(),
-        }
-    }
 
     #[test]
     fn test_build_empty_site() {
@@ -827,5 +817,243 @@ Hello, world!
 
         assert_eq!(stats.assets, 1);
         assert!(output_dir.path().join("style.css").exists());
+    }
+
+    #[test]
+    fn test_rss_feed_paths_default_vs_nondefault() {
+        let content_dir = TempDir::new().unwrap();
+        let output_dir = TempDir::new().unwrap();
+
+        // Create posts in two languages — lang is detected from filename suffix
+        fs::write(
+            content_dir.path().join("en-post.md"),
+            r#"---
+title: "English Post"
+date: 2026-01-14T00:00:00Z
+---
+
+English content.
+"#,
+        )
+        .unwrap();
+        fs::write(
+            content_dir.path().join("zh-post.zh.md"),
+            r#"---
+title: "Chinese Post"
+date: 2026-01-14T00:00:00Z
+---
+
+Chinese content.
+"#,
+        )
+        .unwrap();
+
+        let mut config = test_config();
+        // Register both languages so all_languages() returns both
+        config.languages.insert(
+            "zh".to_string(),
+            typstify_core::config::LanguageConfig {
+                name: Some("中文".to_string()),
+                title: None,
+                description: None,
+            },
+        );
+
+        let builder = Builder::new(config, content_dir.path(), output_dir.path());
+        let stats = builder.build().unwrap();
+
+        // Default language feed at root
+        assert!(
+            output_dir.path().join("rss.xml").exists(),
+            "main RSS feed should exist at root"
+        );
+        // Non-default language feed in subdirectory
+        assert!(
+            output_dir.path().join("zh/rss.xml").exists(),
+            "zh RSS feed should exist at output_dir/zh/rss.xml"
+        );
+        assert!(stats.pages >= 2);
+    }
+
+    fn multilang_config() -> Config {
+        let mut languages = HashMap::new();
+        languages.insert(
+            "zh".to_string(),
+            typstify_core::config::LanguageConfig {
+                name: Some("中文".to_string()),
+                title: None,
+                description: None,
+            },
+        );
+        Config::from_parts(
+            typstify_core::config::SiteConfig {
+                title: "Test Site".to_string(),
+                host: "https://example.com".to_string(),
+                base_path: String::new(),
+                default_language: "en".to_string(),
+                description: None,
+                author: None,
+            },
+            typstify_core::config::BuildConfig::default(),
+            typstify_core::config::SearchConfig::default(),
+            typstify_core::config::RssConfig::default(),
+            typstify_core::config::RobotsConfig::default(),
+            typstify_core::config::TaxonomyConfig::default(),
+            languages,
+        )
+    }
+
+    #[test]
+    fn test_multilang_page_generation() {
+        use chrono::{TimeZone, Utc};
+
+        let config = multilang_config();
+        let generator = HtmlGenerator::new(&config);
+
+        // Create English (default language) page
+        let en_page = Page {
+            url: "/posts/hello-world".to_string(),
+            title: "Hello, World!".to_string(),
+            description: Some("A test".to_string()),
+            date: Some(Utc.with_ymd_and_hms(2024, 1, 15, 10, 0, 0).unwrap()),
+            updated: None,
+            draft: false,
+            lang: "en".to_string(),
+            is_default_lang: true,
+            canonical_id: "posts/hello-world".to_string(),
+            tags: vec![],
+            categories: vec![],
+            content: "<p>Hello, World!</p>".to_string(),
+            summary: None,
+            reading_time: None,
+            word_count: None,
+            toc: vec![],
+            custom_js: vec![],
+            custom_css: vec![],
+            aliases: vec![],
+            template: None,
+            weight: 0,
+            source_path: None,
+        };
+
+        // Create Chinese (non-default language) page
+        let zh_page = Page {
+            url: "/zh/posts/hello-world".to_string(),
+            title: "你好世界".to_string(),
+            description: Some("一个测试".to_string()),
+            date: Some(Utc.with_ymd_and_hms(2024, 1, 15, 10, 0, 0).unwrap()),
+            updated: None,
+            draft: false,
+            lang: "zh".to_string(),
+            is_default_lang: false,
+            canonical_id: "posts/hello-world".to_string(),
+            tags: vec![],
+            categories: vec![],
+            content: "<p>你好</p>".to_string(),
+            summary: None,
+            reading_time: None,
+            word_count: None,
+            toc: vec![],
+            custom_js: vec![],
+            custom_css: vec![],
+            aliases: vec![],
+            template: None,
+            weight: 0,
+            source_path: None,
+        };
+
+        // Generate HTML for both pages
+        let en_html = generator
+            .generate_page(&en_page, &[])
+            .expect("English page generation should succeed");
+        let zh_html = generator
+            .generate_page(&zh_page, &[])
+            .expect("Chinese page generation should succeed");
+
+        // English page: default language navigation URLs (no /zh/ prefix on nav links)
+        assert!(
+            en_html.contains("/posts"),
+            "English page should have default language navigation URLs"
+        );
+        assert!(
+            en_html.contains("/archives"),
+            "English page should have default language archives URL"
+        );
+        assert!(
+            en_html.contains("/tags"),
+            "English page should have default language tags URL"
+        );
+
+        // Chinese page: contains Chinese language content
+        assert!(
+            zh_html.contains("你好"),
+            "Chinese page should contain Chinese content"
+        );
+        assert!(
+            zh_html.contains("lang=\"zh\""),
+            "Chinese page should have lang='zh' attribute"
+        );
+
+        // Chinese page: /zh/ prefix in navigation URLs
+        assert!(
+            zh_html.contains("/zh/posts"),
+            "Chinese page should have /zh/ prefix in navigation URLs"
+        );
+        assert!(
+            zh_html.contains("/zh/archives"),
+            "Chinese page should have /zh/ prefix in archives URL"
+        );
+        assert!(
+            zh_html.contains("/zh/tags"),
+            "Chinese page should have /zh/ prefix in tags URL"
+        );
+
+        // Language switcher: appears on both pages when multiple languages configured
+        assert!(
+            zh_html.contains("lang-switcher"),
+            "Chinese page should contain language switcher"
+        );
+        assert!(
+            zh_html.contains("中文"),
+            "Language switcher should show Chinese language name"
+        );
+        assert!(
+            en_html.contains("lang-switcher"),
+            "English page should also contain language switcher when multiple languages configured"
+        );
+        assert!(
+            en_html.contains("/zh/posts/hello-world"),
+            "English page language switcher should link to Chinese version with /zh/ prefix"
+        );
+    }
+
+    #[test]
+    fn test_page_generation_failed_error() {
+        let errors = vec![
+            "page1.html".to_string(),
+            "page2.html".to_string(),
+            "page3.html".to_string(),
+        ];
+        let err = BuildError::PageGenerationFailed {
+            errors: errors.clone(),
+        };
+        let msg = err.to_string();
+        assert!(
+            msg.contains("3 errors"),
+            "should report error count, got: {msg}"
+        );
+        assert!(
+            msg.contains("page generation failed"),
+            "should include prefix, got: {msg}"
+        );
+
+        // Verify the inner errors are preserved
+        match err {
+            BuildError::PageGenerationFailed { errors: inner } => {
+                assert_eq!(inner.len(), 3);
+                assert_eq!(inner[0], "page1.html");
+            }
+            _ => panic!("wrong variant"),
+        }
     }
 }

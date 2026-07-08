@@ -81,14 +81,14 @@ pub struct AlternateLink {
 
 /// Sitemap generator.
 #[derive(Debug)]
-pub struct SitemapGenerator {
-    config: Config,
+pub struct SitemapGenerator<'a> {
+    config: &'a Config,
 }
 
-impl SitemapGenerator {
+impl<'a> SitemapGenerator<'a> {
     /// Create a new sitemap generator.
     #[must_use]
-    pub fn new(config: Config) -> Self {
+    pub fn new(config: &'a Config) -> Self {
         Self { config }
     }
 
@@ -242,11 +242,18 @@ impl SitemapGenerator {
 
 /// Escape special XML characters.
 fn escape_xml(s: &str) -> String {
-    s.replace('&', "&amp;")
-        .replace('<', "&lt;")
-        .replace('>', "&gt;")
-        .replace('"', "&quot;")
-        .replace('\'', "&apos;")
+    let mut out = String::with_capacity(s.len());
+    for c in s.chars() {
+        match c {
+            '&' => out.push_str("&amp;"),
+            '<' => out.push_str("&lt;"),
+            '>' => out.push_str("&gt;"),
+            '"' => out.push_str("&quot;"),
+            '\'' => out.push_str("&apos;"),
+            _ => out.push(c),
+        }
+    }
+    out
 }
 
 /// Generate XSLT stylesheet for sitemap rendering in browsers.
@@ -557,30 +564,11 @@ pub fn generate_sitemap_xsl() -> String {
 
 #[cfg(test)]
 mod tests {
-    use std::{collections::HashMap, path::PathBuf};
+    use std::path::PathBuf;
 
-    use typstify_core::config::LanguageConfig;
+    use typstify_core::{config::LanguageConfig, test_fixtures::test_config};
 
     use super::*;
-
-    fn test_config() -> Config {
-        Config {
-            site: typstify_core::config::SiteConfig {
-                title: "Test Site".to_string(),
-                host: "https://example.com".to_string(),
-                base_path: String::new(),
-                default_language: "en".to_string(),
-                description: None,
-                author: None,
-            },
-            languages: HashMap::new(),
-            build: typstify_core::config::BuildConfig::default(),
-            search: typstify_core::config::SearchConfig::default(),
-            rss: typstify_core::config::RssConfig::default(),
-            robots: typstify_core::config::RobotsConfig::default(),
-            taxonomies: typstify_core::config::TaxonomyConfig::default(),
-        }
-    }
 
     fn test_page(slug: &str, date: Option<DateTime<Utc>>) -> Page {
         Page {
@@ -611,7 +599,8 @@ mod tests {
 
     #[test]
     fn test_generate_sitemap() {
-        let generator = SitemapGenerator::new(test_config());
+        let config = test_config();
+        let generator = SitemapGenerator::new(&config);
         let page1 = test_page("about", None);
         let page2 = test_page("blog/post-1", Some(Utc::now()));
         let pages: Vec<&Page> = vec![&page1, &page2];
@@ -631,11 +620,19 @@ mod tests {
         assert_eq!(escape_xml("a & b"), "a &amp; b");
         assert_eq!(escape_xml("<tag>"), "&lt;tag&gt;");
         assert_eq!(escape_xml("\"quoted\""), "&quot;quoted&quot;");
+        assert_eq!(escape_xml("'apostrophe'"), "&apos;apostrophe&apos;");
+        assert_eq!(
+            escape_xml("a & < b > \"c\" 'd'"),
+            "a &amp; &lt; b &gt; &quot;c&quot; &apos;d&apos;"
+        );
+        assert_eq!(escape_xml("no special"), "no special");
+        assert_eq!(escape_xml(""), "");
     }
 
     #[test]
     fn test_home_page_priority() {
-        let generator = SitemapGenerator::new(test_config());
+        let config = test_config();
+        let generator = SitemapGenerator::new(&config);
         let mut home = test_page("", None);
         home.url = "/".to_string();
 
@@ -647,7 +644,8 @@ mod tests {
 
     #[test]
     fn test_generate_index() {
-        let generator = SitemapGenerator::new(test_config());
+        let config = test_config();
+        let generator = SitemapGenerator::new(&config);
         let sitemaps = vec!["sitemap-posts.xml", "sitemap-pages.xml"];
 
         let xml = generator.generate_index(&sitemaps);
@@ -676,7 +674,7 @@ mod tests {
                 description: None,
             },
         );
-        let generator = SitemapGenerator::new(config);
+        let generator = SitemapGenerator::new(&config);
 
         let page = test_page("about", None);
         let pages: Vec<&Page> = vec![&page];

@@ -41,7 +41,7 @@ pub fn run(config_path: &Path, strict: bool) -> Result<()> {
 
     // Validate configuration
     println!("Checking configuration...");
-    let config = match Config::load(config_path) {
+    let config = match Config::load_with_env(config_path) {
         Ok(c) => {
             println!("  ✓ Configuration valid");
             Some(c)
