@@ -21,10 +21,10 @@ jobs:
       - name: Install Rust toolchain (stable)
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Install Rust nightly toolchain with rustfmt
+      - name: Install Rust nightly toolchain with rustfmt and clippy
         run: |
           rustup toolchain install nightly
-          rustup component add --toolchain nightly rustfmt
+          rustup component add --toolchain nightly rustfmt clippy
 
       - name: Install just
         uses: taiki-e/install-action@just
