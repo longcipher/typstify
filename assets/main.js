@@ -1,157 +1,226 @@
-// Prevent duplicate initialization
-if (window.__typstifyInit) { throw new Error('already initialized'); }
-window.__typstifyInit = true;
 
-// Global cleanup controller
-const cleanupController = new AbortController();
-const { signal } = cleanupController;
-
-// Cleanup on page unload to prevent memory leaks
-window.addEventListener('pagehide', () => cleanupController.abort());
-window.addEventListener('beforeunload', () => cleanupController.abort());
-
-// Theme toggle functionality
 (function() {
-    const toggle = document.querySelector('.theme-toggle');
-    if (!toggle) return;
-    const html = document.documentElement;
+    'use strict';
 
-    function getTheme() {
-        const saved = localStorage.getItem('theme');
-        if (saved) return saved;
-        return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    function initThemeToggle() {
+        var toggle = document.querySelector('.theme-toggle');
+        if (!toggle) return;
+        var html = document.documentElement;
+
+        toggle.addEventListener('click', function() {
+            var current = html.getAttribute('data-theme');
+            if (current !== 'dark' && current !== 'light') {
+                current = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            }
+            var next = current === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', next);
+            try { localStorage.setItem('theme', next); } catch (e) {}
+        });
+
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
+            try {
+                if (!localStorage.getItem('theme')) {
+                    html.setAttribute('data-theme', e.matches ? 'dark' : 'light');
+                }
+            } catch (e) {}
+        });
     }
 
-    function setTheme(theme) {
-        html.setAttribute('data-theme', theme);
-        localStorage.setItem('theme', theme);
+    function initLangSwitcher() {
+        var switcher = document.querySelector('.lang-switcher');
+        if (!switcher) return;
+
+        switcher.addEventListener('click', function(e) {
+            e.stopPropagation();
+            var isOpen = switcher.classList.contains('open');
+            document.querySelectorAll('.lang-switcher.open').forEach(function(el) {
+                el.classList.remove('open');
+            });
+            if (!isOpen) {
+                switcher.classList.add('open');
+            }
+        });
+
+        switcher.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                switcher.click();
+            } else if (e.key === 'Escape') {
+                switcher.classList.remove('open');
+            }
+        });
+
+        document.addEventListener('click', function() {
+            switcher.classList.remove('open');
+        });
     }
 
-    setTheme(getTheme());
+    function initSearch() {
+        var input = document.getElementById('searchInput');
+        var results = document.getElementById('searchResults');
+        var wrapper = document.getElementById('searchWrapper');
+        var searchBtn = wrapper ? wrapper.querySelector('.search-btn') : null;
+        if (!input || !results || !wrapper) return;
 
-    toggle.addEventListener('click', () => {
-        const current = html.getAttribute('data-theme') || getTheme();
-        setTheme(current === 'dark' ? 'light' : 'dark');
-    }, { signal });
-
-    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
-        if (!localStorage.getItem('theme')) {
-            setTheme(e.matches ? 'dark' : 'light');
+        if (searchBtn) {
+            searchBtn.addEventListener('click', function() {
+                input.focus();
+            });
         }
-    }, { signal });
-})();
 
-// Search functionality
-(function() {
-    const wrapper = document.getElementById('searchWrapper');
-    const btn = document.getElementById('searchBtn');
-    const input = document.getElementById('searchInput');
-    const results = document.getElementById('searchResults');
-    if (!wrapper || !btn || !input || !results) return;
+        var searchIndex = null;
+        var debounceTimer = null;
+        var activeIndex = -1;
+        var currentMatches = [];
 
-    let searchIndex = null;
-    let isLoading = false;
-    let debounceTimer = null;
+        function getBasePath() {
+            var path = window.location.pathname;
+            var segments = path.split('/').filter(Boolean);
+            if (segments.length > 0 && segments[0].length === 2) {
+                return '/' + segments[0];
+            }
+            return '';
+        }
 
-    // Clear debounce on cleanup
-    signal.addEventListener('abort', () => clearTimeout(debounceTimer));
+        function escapeHtml(text) {
+            var div = document.createElement('div');
+            div.appendChild(document.createTextNode(text));
+            return div.innerHTML;
+        }
 
-    btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        if (wrapper.classList.contains('active')) {
+        function loadSearchIndex() {
+            if (searchIndex) return Promise.resolve(searchIndex);
+            var basePath = getBasePath();
+            var indexPath = basePath + '/search-index.json';
+            return fetch(indexPath)
+                .then(function(res) {
+                    if (!res.ok) throw new Error('not found');
+                    return res.json();
+                })
+                .then(function(data) {
+                    searchIndex = data;
+                    return data;
+                })
+                .catch(function() {
+                    return null;
+                });
+        }
+
+        function showResults(items) {
+            currentMatches = items;
+            activeIndex = -1;
+            if (!items || items.length === 0) {
+                results.innerHTML = '<div class="search-empty">No results found</div>';
+            } else {
+                results.innerHTML = items.map(function(doc, idx) {
+                    var tagsHtml = '';
+                    if (doc.tags && doc.tags.length > 0) {
+                        tagsHtml = '<div class="search-result-item-tags">' +
+                            doc.tags.map(function(t) {
+                                return '<span class="search-result-tag">' + escapeHtml(t) + '</span>';
+                            }).join('') + '</div>';
+                    }
+                    return '<a href="' + escapeHtml(doc.url) + '" class="search-result-item" data-index="' + idx + '">' +
+                        '<div class="search-result-item-title">' + escapeHtml(doc.title) + '</div>' +
+                        (doc.description ? '<div class="search-result-item-summary">' + escapeHtml(doc.description) + '</div>' : '') +
+                        tagsHtml + '</a>';
+                }).join('');
+            }
+            results.classList.add('visible');
+        }
+
+        function hideResults() {
+            results.classList.remove('visible');
+            currentMatches = [];
+            activeIndex = -1;
+        }
+
+        function updateActive() {
+            var items = results.querySelectorAll('.search-result-item');
+            items.forEach(function(el, idx) {
+                el.setAttribute('data-active', idx === activeIndex ? 'true' : 'false');
+            });
+        }
+
+        function performSearch(query) {
+            loadSearchIndex().then(function(index) {
+                if (!index || !index.documents) {
+                    results.innerHTML = '<div class="search-error">Search index not available</div>';
+                    results.classList.add('visible');
+                    return;
+                }
+                var q = query.toLowerCase();
+                var matches = index.documents.filter(function(doc) {
+                    var title = (doc.title || '').toLowerCase();
+                    var desc = (doc.description || '').toLowerCase();
+                    var tags = (doc.tags || []).join(' ').toLowerCase();
+                    if (title.indexOf(q) !== -1) return true;
+                    if (desc.indexOf(q) !== -1) return true;
+                    if (tags.indexOf(q) !== -1) return true;
+                    return false;
+                }).slice(0, 8);
+                showResults(matches);
+            });
+        }
+
+        input.addEventListener('focus', function() {
+            loadSearchIndex();
             if (input.value.trim()) {
                 performSearch(input.value.trim());
             }
-        } else {
-            wrapper.classList.add('active');
-            input.focus();
-            loadSearchIndex();
-        }
-    }, { signal });
+        });
 
-    document.addEventListener('click', (e) => {
-        if (!wrapper.contains(e.target)) {
-            wrapper.classList.remove('active');
-            results.classList.remove('show');
-        }
-    }, { signal });
-
-    input.addEventListener('input', () => {
-        clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(() => {
-            const query = input.value.trim();
-            if (query.length >= 1) {
+        input.addEventListener('input', function() {
+            clearTimeout(debounceTimer);
+            var query = input.value.trim();
+            if (query.length === 0) {
+                hideResults();
+                return;
+            }
+            debounceTimer = setTimeout(function() {
                 performSearch(query);
-            } else {
-                results.classList.remove('show');
-            }
-        }, 150);
-    }, { signal });
+            }, 200);
+        });
 
-    input.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            performSearch(input.value.trim());
-        } else if (e.key === 'Escape') {
-            wrapper.classList.remove('active');
-            results.classList.remove('show');
-        }
-    }, { signal });
+        input.addEventListener('keydown', function(e) {
+            var items = results.querySelectorAll('.search-result-item');
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                if (items.length === 0) return;
+                activeIndex = activeIndex < items.length - 1 ? activeIndex + 1 : 0;
+                updateActive();
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (items.length === 0) return;
+                activeIndex = activeIndex > 0 ? activeIndex - 1 : items.length - 1;
+                updateActive();
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                if (activeIndex >= 0 && currentMatches[activeIndex]) {
+                    window.location.href = currentMatches[activeIndex].url;
+                }
+            } else if (e.key === 'Escape') {
+                hideResults();
+                input.blur();
+            }
+        });
 
-    async function loadSearchIndex() {
-        if (searchIndex || isLoading) return;
-        isLoading = true;
-        try {
-            const pathParts = window.location.pathname.split('/').filter(Boolean);
-            const langPrefix = pathParts.length > 0 && pathParts[0].length === 2 ? pathParts[0] : '';
-            const indexPath = langPrefix ? `/${langPrefix}/search-index.json` : '/search-index.json';
-            
-            const response = await fetch(indexPath, { signal });
-            if (response.ok) {
-                searchIndex = await response.json();
+        document.addEventListener('click', function(e) {
+            if (!wrapper.contains(e.target)) {
+                hideResults();
             }
-        } catch (err) {
-            if (err.name !== 'AbortError') {
-                console.log('Search index not available');
-            }
-        }
-        isLoading = false;
+        });
     }
 
-    function performSearch(query) {
-        if (!searchIndex || !searchIndex.documents) {
-            results.innerHTML = '<div class="search-no-results">Search is loading...</div>';
-            results.classList.add('show');
-            return;
-        }
-
-        const q = query.toLowerCase();
-        const matches = searchIndex.documents.filter(doc => {
-            const title = doc.title.toLowerCase();
-            const desc = (doc.description || '').toLowerCase();
-            const terms = doc.terms || [];
-            
-            if (title.includes(q) || desc.includes(q)) return true;
-            if (terms.some(t => t.includes(q) || q.includes(t))) return true;
-            return false;
-        }).slice(0, 10);
-
-        if (matches.length === 0) {
-            results.innerHTML = '<div class="search-no-results">No results found</div>';
-        } else {
-            results.innerHTML = matches.map(doc => 
-                `<a href="${doc.url}" class="search-result-item">
-                    <div class="search-result-title">${escapeHtml(doc.title)}</div>
-                    ${doc.description ? `<div class="search-result-snippet">${escapeHtml(doc.description)}</div>` : ''}
-                </a>`
-            ).join('');
-        }
-        results.classList.add('show');
-    }
-    
-    function escapeHtml(text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+            initThemeToggle();
+            initLangSwitcher();
+            initSearch();
+        });
+    } else {
+        initThemeToggle();
+        initLangSwitcher();
+        initSearch();
     }
 })();

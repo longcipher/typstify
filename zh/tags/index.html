@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh" class="scroll-smooth">
+<html lang="zh">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,16 +8,13 @@
     <meta name="author" content="">
     <link rel="canonical" href="https://longcipher.github.io/typstify/zh/tags">
     
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/typstify/assets/style.css">
     
     <script>
-        // Inline critical JS to prevent FOUC (Flash of Unstyled Content)
         (function() {
-            const saved = localStorage.getItem('theme');
-            const theme = saved || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+            var saved = null;
+            try { saved = localStorage.getItem('theme'); } catch(e) {}
+            var theme = saved || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
             document.documentElement.setAttribute('data-theme', theme);
         })();
     </script>
@@ -66,8 +63,8 @@
             <section class="taxonomy-index">
     <h1>Tags</h1>
     <div class="tags-cloud">
-        <a href="/typstify/zh/tags/欢迎" class="tag-item"><span class="tag-name">欢迎</span><span class="tag-count">1</span></a>
-<a href="/typstify/zh/tags/介绍" class="tag-item"><span class="tag-name">介绍</span><span class="tag-count">1</span></a>
+        <a href="/typstify/zh/tags/介绍" class="tag-item"><span class="tag-name">介绍</span><span class="tag-count">1</span></a>
+<a href="/typstify/zh/tags/欢迎" class="tag-item"><span class="tag-name">欢迎</span><span class="tag-count">1</span></a>
     </div>
 </section>
         </div>
