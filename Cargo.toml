@@ -3,7 +3,7 @@ members = ["bin/*", "crates/*"]
 resolver = "3"
 
 [workspace.package]
-version = "0.1.7"
+version = "0.1.8"
 edition = "2024"
 authors = ["longcipher"]
 license = "Apache-2.0"
@@ -17,10 +17,10 @@ exclude = ["target", "node_modules", ".rumdl_cache", "tmp"]
 
 [workspace.dependencies]
 # Local crates
-typstify-core = { path = "crates/typstify-core", version = "0.1.7" }
-typstify-generator = { path = "crates/typstify-generator", version = "0.1.7" }
-typstify-parser = { path = "crates/typstify-parser", version = "0.1.7" }
-typstify-search = { path = "crates/typstify-search", version = "0.1.7" }
+typstify-core = { path = "crates/typstify-core", version = "0.1.8" }
+typstify-generator = { path = "crates/typstify-generator", version = "0.1.8" }
+typstify-parser = { path = "crates/typstify-parser", version = "0.1.8" }
+typstify-search = { path = "crates/typstify-search", version = "0.1.8" }
 
 # external crates
 axum = "0.8.9"

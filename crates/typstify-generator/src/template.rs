@@ -193,7 +193,7 @@ impl TemplateRegistry {
 /// Default base HTML template.
 /// Uses external CSS and JS files for better caching and smaller HTML files.
 pub const DEFAULT_BASE_TEMPLATE: &str = r##"<!DOCTYPE html>
-<html lang="{{ lang }}" class="scroll-smooth">
+<html lang="{{ lang }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -202,16 +202,13 @@ pub const DEFAULT_BASE_TEMPLATE: &str = r##"<!DOCTYPE html>
     <meta name="author" content="{{ author? }}">
     <link rel="canonical" href="{{ canonical_url }}">
     {{ hreflang|raw? }}
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ base_path }}/assets/style.css">
     {{ custom_css|raw? }}
     <script>
-        // Inline critical JS to prevent FOUC (Flash of Unstyled Content)
         (function() {
-            const saved = localStorage.getItem('theme');
-            const theme = saved || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+            var saved = null;
+            try { saved = localStorage.getItem('theme'); } catch(e) {}
+            var theme = saved || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
             document.documentElement.setAttribute('data-theme', theme);
         })();
     </script>
