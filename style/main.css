@@ -1,31 +1,108 @@
 @import "tailwindcss";
 
 @theme {
-  --color-primary: #3b82f6;
-  --color-secondary: #64748b;
+  --color-primary: #d4760a;
+  --color-primary-deep: #a85c08;
+  --color-accent: #1e5a8a;
+  --color-bg: #ffffff;
+  --color-surface: #f8f7f5;
+  --color-ink: #1a1a1e;
+  --color-muted: #6b6b73;
+  --color-border: #e2e1dd;
+  --color-success: #2d8a4e;
+  --color-error: #c4382a;
   --font-sans: "Inter", system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", monospace;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
 }
 
-/* Search component styles */
-.search-container {
-  @apply relative w-full max-w-md;
+/* Search component styles — The Clean Workshop */
+.search-wrapper {
+  @apply relative;
 }
 
 .search-input {
-  @apply w-full px-4 py-2 border border-gray-300 rounded-lg;
-  @apply focus:outline-none focus:ring-2 focus:ring-primary;
+  @apply w-full px-3 py-2 text-sm border rounded-md;
+  @apply bg-bg text-ink border-border;
+  @apply placeholder:text-muted;
+  @apply transition-all duration-150;
+  @apply focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/30;
+  font-family: var(--font-sans);
+}
+
+.search-btn {
+  @apply absolute right-2 top-1/2 -translate-y-1/2 p-1.5;
+  @apply text-muted hover:text-ink;
+  @apply transition-colors duration-150;
+  @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30;
+}
+
+.search-btn svg {
+  @apply w-4 h-4;
 }
 
 .search-results {
-  @apply absolute top-full left-0 right-0 mt-2;
-  @apply bg-white border border-gray-200 rounded-lg shadow-lg;
-  @apply max-h-96 overflow-y-auto;
+  @apply absolute top-full left-0 right-0 mt-1 z-50;
+  @apply bg-bg border border-border rounded-md;
+  @apply max-h-80 overflow-y-auto;
+  @apply shadow-sm;
+}
+
+.search-results:empty {
+  @apply hidden;
 }
 
 .search-result-item {
-  @apply p-4 border-b border-gray-100 last:border-b-0;
-  @apply hover:bg-gray-50 transition-colors;
+  @apply block px-3 py-2.5 text-sm;
+  @apply text-ink hover:bg-surface;
+  @apply transition-colors duration-100;
+  @apply border-b border-border last:border-b-0;
+  @apply focus:outline-none focus-visible:bg-surface;
+}
+
+.search-result-item-title {
+  @apply font-medium text-ink leading-snug;
+}
+
+.search-result-item-summary {
+  @apply text-muted text-xs mt-0.5 leading-relaxed;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.search-result-item-tags {
+  @apply flex flex-wrap gap-1 mt-1.5;
+}
+
+.search-result-tag {
+  @apply inline-flex px-1.5 py-0.5 text-xs rounded-full;
+  @apply bg-surface text-muted;
+}
+
+.search-loading {
+  @apply px-3 py-2.5 text-sm text-muted text-center;
+}
+
+.search-empty {
+  @apply px-3 py-2.5 text-sm text-muted text-center;
+}
+
+.search-error {
+  @apply px-3 py-2.5 text-sm text-error text-center;
+}
+
+/* Keyboard navigation highlight */
+.search-result-item[data-active="true"] {
+  @apply bg-surface;
+}
+
+/* Search shortcut hint */
+.search-shortcut {
+  @apply absolute right-10 top-1/2 -translate-y-1/2;
+  @apply px-1.5 py-0.5 text-xs text-muted;
+  @apply bg-surface border border-border rounded;
+  font-family: var(--font-mono);
 }
 
 /* Article prose styles */

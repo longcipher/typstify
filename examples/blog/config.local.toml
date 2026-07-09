@@ -1,0 +1,30 @@
+# Local development config (no base_path prefix)
+[site]
+title = "My Typstify Blog"
+description = "A sample blog built with Typstify"
+host = "http://localhost:8400"
+default_language = "en"
+author = "Typstify Team"
+
+[languages.en]
+name = "English"
+
+[languages.zh]
+name = "中文"
+title = "我的 Typstify 博客"
+description = "使用 Typstify 构建的示例博客"
+
+[build]
+output_dir = "public"
+minify = false
+syntax_theme = "base16-ocean.dark"
+drafts = false
+
+[search]
+enabled = true
+index_fields = ["title", "body", "tags"]
+chunk_size = 65536
+
+[rss]
+enabled = true
+limit = 20
