@@ -1,6 +1,6 @@
 ## https://taplo.tamasfe.dev/configuration/file.html
 
-include = ["**/Cargo.toml"]
+include = ["Cargo.toml", "bin/*/Cargo.toml", "crates/*/Cargo.toml"]
 
 [formatting]
 # Align consecutive entries vertically.

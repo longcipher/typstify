@@ -117,12 +117,16 @@
           .join('');
 
         const resultId = `search-result-${i}`;
+        const hasUrl = r.url && r.url !== '#';
+        const tag = hasUrl ? 'a' : 'div';
+        const hrefAttr = hasUrl ? ` href="${escapeHtml(r.url)}"` : '';
+
         return `
-        <a href="${escapeHtml(r.url || '#')}" class="search-result-item" id="${resultId}" data-index="${i}" role="option" aria-selected="false">
+        <${tag}${hrefAttr} class="search-result-item" id="${resultId}" data-index="${i}" role="option" aria-selected="false">
           <div class="search-result-item-title">${escapeHtml(r.title || 'Untitled')}</div>
           ${r.description ? `<div class="search-result-item-summary">${escapeHtml(r.description)}</div>` : ''}
           ${tags ? `<div class="search-result-item-tags">${tags}</div>` : ''}
-        </a>`;
+        </${tag}>`;
       })
       .join('');
 
@@ -219,6 +223,11 @@
     if (query.length < MIN_QUERY_LENGTH) {
       renderEmpty();
       return;
+    }
+
+    // P2 fix: Show loading immediately, not after debounce
+    if (!searchIndex) {
+      renderLoading();
     }
 
     debounceTimer = setTimeout(async () => {

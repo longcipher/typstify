@@ -92,34 +92,38 @@ components:
     typography: "{typography.label}"
 ---
 
-# Design System: Typstify
+## Design System: Typstify
 
-## 1. Overview
+### 1. Overview
 
-**Creative North Star: "The Clean Workshop"**
+## Creative North Star: "The Clean Workshop"
 
 A quiet workshop — precise tools on a clean bench, nothing wasted. Every surface earns its place. The palette is restrained: warm honey accent against near-white surfaces, deep ink for text, structural blue for secondary emphasis. This system explicitly rejects the generic AI aesthetic — no cream backgrounds, no gradient text, no identical card grids, no glassmorphism.
 
 **Key Characteristics:**
+
 - Restrained palette: one warm accent (honey/amber) used sparingly, structural blue for secondary emphasis
 - Pure white surfaces with minimal tint — the accent carries the warmth, not the background
 - Typography-first hierarchy: Inter in multiple weights, no decorative font pairings
 - Flat elevation by default — shadows appear only as state response (hover, focus)
 - Developer-grade precision: every token has a specific role, nothing decorative
 
-## 2. Colors
+### 2. Colors
 
 The palette is restrained — tinted neutrals plus one warm accent at ≤10% of surface area. The accent does the emotional work; the surface stays clean.
 
-### Primary
+#### Primary
+
 - **Workshop Honey** (oklch(0.691 0.146 74.6) / #d4760a): The brand anchor. Used on primary buttons, active states, key CTAs, and the logo mark. Its warmth carries the brand personality against the otherwise neutral surface.
 
 - **Honey Deep** (oklch(0.55 0.146 74.6) / #a85c08): Hover/active state for primary elements. Darker for contrast when the element needs to feel pressed or engaged.
 
-### Secondary
+#### Secondary
+
 - **Structural Blue** (oklch(0.45 0.10 250) / #1e5a8a): Links, secondary actions, informational badges, and code syntax. Provides cool contrast against the warm primary without competing for attention.
 
-### Neutral
+#### Neutral
+
 - **Clean White** (oklch(1.000 0.000 0) / #ffffff): Body background. Pure, no tint. The accent carries the warmth; the surface stays neutral.
 
 - **Workshop Surface** (oklch(0.975 0.008 75) / #f8f7f5): Cards, panels, elevated surfaces. Slight warm tint toward the primary hue — barely perceptible, just enough to separate from pure white.
@@ -130,12 +134,13 @@ The palette is restrained — tinted neutrals plus one warm accent at ≤10% of 
 
 - **Edge** (oklch(0.91 0.006 75) / #e2e1dd): Borders, dividers, subtle separations. Warm-tinted to harmonize with the surface.
 
-### Named Rules
+#### Named Rules
+
 **The Ten Percent Rule.** Workshop Honey appears on ≤10% of any given screen. Its rarity is the point — it marks what matters. If every element is honey, nothing is.
 
 **The Clean Surface Rule.** Backgrounds are pure white or near-pure. Warmth lives in the accent and typography, never in the surface tint. The moment you add warmth to both accent AND background, you're in AI-cream territory.
 
-## 3. Typography
+### 3. Typography
 
 **Display Font:** Inter (with system-ui, sans-serif fallback)
 **Body Font:** Inter (with system-ui, sans-serif fallback)
@@ -143,60 +148,70 @@ The palette is restrained — tinted neutrals plus one warm accent at ≤10% of 
 
 **Character:** A single sans-serif family in multiple weights — precise, technical, no decoration. Inter's geometry reads as clean and modern without being cold. The pairing with JetBrains Mono for code blocks reinforces the developer-tool identity.
 
-### Hierarchy
+#### Hierarchy
+
 - **Display** (700, clamp(2rem, 5vw, 3.5rem), 1.1): Hero headlines on landing pages and documentation headers. Maximum presence, minimum decoration.
 - **Headline** (600, clamp(1.5rem, 3vw, 2rem), 1.2): Section headers, page titles. Clear hierarchy break from display.
 - **Title** (600, 1.25rem, 1.3): Card titles, subsection headers, navigation items.
 - **Body** (400, 1rem, 1.6): Primary reading text. Line length capped at 65–75ch for comfortable reading.
 - **Label** (500, 0.875rem, 0.01em): Buttons, badges, navigation, form labels. Slightly tracked for clarity at small sizes.
 
-### Named Rules
+#### Named Rules
+
 **The Single Family Rule.** One font family (Inter) in multiple weights. No serif display, no decorative pairings. The type system is a toolbox, not a showcase.
 
 **The Weight Hierarchy Rule.** Weight carries meaning: 700 = hero, 600 = section, 500 = label, 400 = body. Never use weight decoratively.
 
-## 4. Elevation
+### 4. Elevation
 
 Flat by default. Surfaces are flat at rest — no shadows, no lift. Depth is conveyed through tonal layering (the surface color) and borders, not drop shadows. Shadows appear only as a response to state: hover elevation, focus rings, dropdown menus, and modal overlays.
 
-### Shadow Vocabulary
+#### Shadow Vocabulary
+
 - **Hover Lift** (`0 2px 8px rgba(0,0,0,0.08)`): Subtle lift on interactive elements (cards, buttons) when hovered. ambient, not structural.
 - **Focus Ring** (`0 0 0 2px rgba(212,118,10,0.3)`): Honey-tinted focus indicator. Functional, not decorative.
 - **Dropdown** (`0 4px 16px rgba(0,0,0,0.12)`): Menus, tooltips, popovers. Structural shadow for separation.
 
-### Named Rules
+#### Named Rules
+
 **The Flat-By-Default Rule.** Surfaces ship flat. Shadows are earned through interaction, not applied as decoration. If a shadow exists at rest, it's wrong.
 
-## 5. Components
+### 5. Components
 
-### Buttons
+#### Buttons
+
 - **Shape:** Gently curved edges (6px radius). Full-pill for tags and badges only.
 - **Primary:** Workshop Honey fill, white text, 10px 24px padding. Label typography (500, 0.875rem).
 - **Hover / Focus:** Background shifts to Honey Deep. Focus ring: 2px honey-tinted glow.
 - **Secondary:** Transparent background, Deep Ink text, same padding. Border: 1px Edge color.
 
-### Chips / Tags
+#### Chips / Tags
+
 - **Style:** Workshop Surface background, Tool Gray text, full-pill radius (9999px). Compact: 4px 12px padding.
 - **State:** Selected state swaps to Primary fill with white text.
 
-### Cards / Containers
+#### Cards / Containers
+
 - **Corner Style:** 6px radius — barely curved, structural not decorative.
 - **Background:** Clean White (default) or Workshop Surface (elevated).
 - **Shadow Strategy:** Flat at rest. Hover Lift shadow on interactive cards.
 - **Border:** 1px Edge color. Never decorative side-stripe borders.
 
-### Inputs / Fields
+#### Inputs / Fields
+
 - **Style:** Clean White background, 1px Edge border, 6px radius. Body typography.
 - **Focus:** Border shifts to Primary, 2px honey-tinted focus ring replaces default border.
 - **Error:** Border shifts to Error (#c4382a), no other decoration.
 
-### Navigation
+#### Navigation
+
 - **Style:** Horizontal top bar or sidebar. Clean White background, Deep Ink text.
 - **Default:** Label typography, Tool Gray text.
 - **Hover:** Deep Ink text, subtle Workshop Surface background.
 - **Active:** Primary text color, 2px bottom border (horizontal) or left border (sidebar) in Workshop Honey.
 
-### Search
+#### Search
+
 - **Style:** Inline dropdown in nav bar. Clean White surface, 1px Edge border, 6px radius.
 - **Input:** 10px 14px padding, Body typography, placeholder in Tool Gray. Focus: border shifts to Primary, 2px honey-tinted ring.
 - **Results:** Absolute positioned dropdown, max-height 320px, scrollable. Each item: 12px 14px padding, hover shifts to Workshop Surface background.
@@ -204,14 +219,16 @@ Flat by default. Surfaces are flat at rest — no shadows, no lift. Depth is con
 - **States:** Default (collapsed), typing (results appear), loading, no results ("No results for..."), error, keyboard navigation highlight.
 - **Keyboard:** Arrow keys navigate, Enter selects, Escape closes.
 
-### Code Blocks
+#### Code Blocks
+
 - **Style:** Deep Ink background (#1a1a1e), near-white text. JetBrains Mono at 0.875rem.
 - **Border:** None — the dark background provides sufficient separation.
 - **Language Badge:** Workshop Surface chip in top-right corner.
 
-## 6. Do's and Don'ts
+### 6. Do's and Don'ts
 
-### Do:
+#### Do
+
 - **Do** use Workshop Honey sparingly — it marks what matters, not everything.
 - **Do** keep backgrounds pure white. The accent carries warmth; the surface stays neutral.
 - **Do** use weight hierarchy (700/600/500/400) to convey importance, not size alone.
@@ -220,7 +237,8 @@ Flat by default. Surfaces are flat at rest — no shadows, no lift. Depth is con
 - **Do** maintain ≥4.5:1 contrast for body text, ≥3:1 for large text.
 - **Do** respect `prefers-reduced-motion: reduce` with instant transitions.
 
-### Don't:
+#### Don't
+
 - **Don't** use cream/sand/beige backgrounds — the saturated AI default. Pure white.
 - **Don't** apply gradient text (`background-clip: text`). Decorative, never meaningful.
 - **Don't** use glassmorphism (blurs, glass cards) as decoration.
